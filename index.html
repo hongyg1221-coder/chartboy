@@ -132,6 +132,40 @@ body{
 .card-dets li{font-size:12px;color:var(--dim);line-height:1.5}
 
 .data-note{font-size:11px;color:var(--dim);text-align:right;margin-top:4px;padding-bottom:16px}
+
+/* 전체 스캔 */
+.scan-btn{
+  margin-top:10px;padding:9px 20px;background:var(--surface2);
+  color:var(--fg);border:1px solid var(--border);border-radius:8px;
+  font-size:13px;font-weight:600;cursor:pointer;transition:background .15s
+}
+.scan-btn:hover{background:var(--border)}
+#scanSection{padding:0 0 24px}
+.scan-hd{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.scan-hd h2{font-size:16px;font-weight:700;margin:0}
+.scan-progress{flex:1;min-width:120px}
+.prog-bar{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;margin-bottom:3px}
+.prog-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .3s}
+.prog-txt{font-size:11px;color:var(--dim)}
+.filter-row{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.fbtn{font-size:12px;padding:4px 12px;border-radius:16px;border:1px solid var(--border);
+  background:var(--surface2);color:var(--dim);cursor:pointer;transition:all .15s}
+.fbtn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.fbtn.bull-f.active{background:var(--bull);border-color:var(--bull);color:#fff}
+.fbtn.bear-f.active{background:var(--bear);border-color:var(--bear);color:#fff}
+.scan-table{width:100%;border-collapse:collapse;font-size:13px}
+.scan-table th{text-align:left;padding:7px 10px;font-size:11px;color:var(--dim);
+  border-bottom:1px solid var(--border);font-weight:600;white-space:nowrap}
+.scan-table td{padding:8px 10px;border-bottom:1px solid var(--border2,var(--border));
+  vertical-align:middle;white-space:nowrap}
+.scan-table tr:hover td{background:var(--surface2);cursor:pointer}
+.scan-table .rank{color:var(--dim);font-size:12px;width:30px}
+.scan-table .sname{font-weight:600;max-width:120px;overflow:hidden;text-overflow:ellipsis}
+.scan-table .smkt{font-size:11px;color:var(--dim)}
+.scan-table .score-cell{font-weight:700}
+.scan-table .chip-sm{font-size:10px;font-weight:600;padding:2px 7px;border-radius:12px}
+.scan-wrap{overflow-x:auto}
+.scan-empty{text-align:center;padding:24px;color:var(--dim);font-size:13px}
 </style>
 
 <div class="app">
@@ -148,7 +182,38 @@ body{
     <div class="quick-row">
       <span class="qlabel">바로가기:</span>
     </div>
+    <button class="scan-btn" id="scanBtn">전체 스캔 (KOSPI+KOSDAQ 순위)</button>
   </header>
+
+  <section id="scanSection" hidden>
+    <div class="scan-hd">
+      <h2>종목 종합 순위</h2>
+      <div class="scan-progress" id="scanProgress" hidden>
+        <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+        <div class="prog-txt" id="progTxt">준비 중...</div>
+      </div>
+    </div>
+    <div class="filter-row" id="filterRow" hidden>
+      <button class="fbtn active" data-f="all">전체</button>
+      <button class="fbtn bull-f" data-f="bull">매수신호</button>
+      <button class="fbtn bear-f" data-f="bear">매도신호</button>
+      <button class="fbtn" data-f="neutral">중립</button>
+    </div>
+    <div class="scan-wrap">
+      <table class="scan-table" id="scanTable">
+        <thead>
+          <tr>
+            <th>#</th><th>종목명</th><th>시장</th><th>현재가</th>
+            <th>등락률</th><th>종합점수</th><th>신호</th>
+            <th>MA</th><th>MACD</th><th>RSI</th>
+          </tr>
+        </thead>
+        <tbody id="scanBody">
+          <tr><td colspan="10" class="scan-empty">전체 스캔 버튼을 눌러주세요</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
 
   <div id="loadingState" class="state-box" hidden>
     <div class="spinner"></div>
@@ -227,6 +292,38 @@ const STOCKS=[
   {c:'214150',n:'클래시스',m:'KQ'},{c:'145020',n:'휴젤',m:'KQ'},
   {c:'091990',n:'셀트리온헬스케어',m:'KQ'},{c:'348150',n:'넥슨게임즈',m:'KQ'},
   {c:'237690',n:'에스티팜',m:'KQ'},{c:'236200',n:'슈프리마',m:'KQ'},
+  // 추가 KOSPI
+  {c:'010140',n:'삼성중공업',m:'KS'},{c:'011200',n:'HMM',m:'KS'},
+  {c:'020150',n:'롯데쇼핑',m:'KS'},{c:'024110',n:'IBK기업은행',m:'KS'},
+  {c:'036460',n:'한국가스공사',m:'KS'},{c:'069960',n:'현대백화점',m:'KS'},
+  {c:'078930',n:'GS',m:'KS'},{c:'079550',n:'LIG넥스원',m:'KS'},
+  {c:'097950',n:'CJ제일제당',m:'KS'},{c:'128940',n:'한미약품',m:'KS'},
+  {c:'161390',n:'한국타이어앤테크놀로지',m:'KS'},{c:'180640',n:'한진칼',m:'KS'},
+  {c:'185750',n:'종근당',m:'KS'},{c:'282330',n:'BGF리테일',m:'KS'},
+  {c:'323410',n:'카카오뱅크',m:'KS'},{c:'011790',n:'SKC',m:'KS'},
+  {c:'008770',n:'호텔신라',m:'KS'},{c:'004370',n:'농심',m:'KS'},
+  {c:'004990',n:'롯데지주',m:'KS'},{c:'005830',n:'DB손해보험',m:'KS'},
+  {c:'006800',n:'미래에셋증권',m:'KS'},{c:'021240',n:'코웨이',m:'KS'},
+  {c:'030000',n:'제일기획',m:'KS'},{c:'034220',n:'LG디스플레이',m:'KS'},
+  {c:'042660',n:'한화오션',m:'KS'},{c:'003670',n:'포스코퓨처엠',m:'KS'},
+  {c:'010620',n:'현대미포조선',m:'KS'},{c:'003550',n:'LG',m:'KS'},
+  {c:'007070',n:'GS리테일',m:'KS'},{c:'001040',n:'CJ',m:'KS'},
+  {c:'016360',n:'삼성증권',m:'KS'},{c:'071050',n:'한국금융지주',m:'KS'},
+  {c:'329180',n:'HD현대',m:'KS'},{c:'006280',n:'녹십자',m:'KS'},
+  {c:'002380',n:'KCC',m:'KS'},{c:'035250',n:'강원랜드',m:'KS'},
+  {c:'272450',n:'한화시스템',m:'KS'},{c:'018880',n:'한온시스템',m:'KS'},
+  {c:'014820',n:'동원시스템즈',m:'KS'},{c:'008000',n:'조선호텔앤리조트',m:'KS'},
+  // 추가 KOSDAQ
+  {c:'022100',n:'포스코DX',m:'KQ'},{c:'066970',n:'엘앤에프',m:'KQ'},
+  {c:'068760',n:'셀트리온제약',m:'KQ'},{c:'058470',n:'리노공업',m:'KQ'},
+  {c:'108320',n:'LX세미콘',m:'KQ'},{c:'253450',n:'스튜디오드래곤',m:'KQ'},
+  {c:'240810',n:'원익IPS',m:'KQ'},{c:'302440',n:'SK바이오사이언스',m:'KQ'},
+  {c:'112040',n:'위메이드',m:'KQ'},{c:'086900',n:'메디톡스',m:'KQ'},
+  {c:'096980',n:'에코프로에이치엔',m:'KQ'},{c:'335890',n:'비올',m:'KQ'},
+  {c:'419530',n:'에이피알',m:'KQ'},{c:'067310',n:'하나마이크론',m:'KQ'},
+  {c:'017810',n:'파마리서치',m:'KQ'},{c:'100120',n:'뷰웍스',m:'KQ'},
+  {c:'089590',n:'제주항공',m:'KQ'},{c:'053800',n:'안랩',m:'KQ'},
+  {c:'048260',n:'오스코텍',m:'KQ'},{c:'376300',n:'디어유',m:'KQ'},
 ];
 const QUICK=['삼성전자','SK하이닉스','에코프로','카카오','NAVER'];
 
@@ -860,12 +957,152 @@ QUICK.forEach(name=>{
   qrow.appendChild(btn);
 });
 
+// ── 전체 스캔 ──────────────────────────────────────────────
+let scanResults=[];
+let scanFilter='all';
+let scanRunning=false;
+
+function scoreToSignal(norm){
+  if(norm>=0.60)return'bull';
+  if(norm<=0.40)return'bear';
+  return'neutral';
+}
+
+function chipHtml(sig){
+  const label=sig==='bull'?'매수':sig==='bear'?'매도':'중립';
+  return`<span class="chip-sm chip ${sig}">${label}</span>`;
+}
+
+function fmt(n){
+  if(n==null)return'—';
+  return n.toLocaleString('ko-KR');
+}
+function fmtPct(n){
+  if(n==null)return'—';
+  const s=n>=0?'+':'';
+  return`${s}${n.toFixed(2)}%`;
+}
+
+async function runScan(){
+  if(scanRunning)return;
+  scanRunning=true;
+  scanResults=[];
+  const btn=$('scanBtn');
+  btn.textContent='스캔 중...';btn.disabled=true;
+  $('scanSection').hidden=false;
+  $('scanProgress').hidden=false;
+  $('filterRow').hidden=true;
+  $('scanBody').innerHTML=`<tr><td colspan="10" class="scan-empty">분석 중...</td></tr>`;
+
+  const total=STOCKS.length;
+  let done=0;
+
+  const BATCH=6;
+  for(let i=0;i<total;i+=BATCH){
+    const batch=STOCKS.slice(i,i+BATCH);
+    await Promise.all(batch.map(async s=>{
+      const sym=`${s.c}.${s.m}`;
+      try{
+        const res=await fetchYF(sym,'3mo');
+        const candles=parseCandles(res);
+        if(candles.length<20)return;
+        const analyses=runAll(candles);
+        let bullC=0,bearC=0,neuC=0,tot=0,maxS=0;
+        analyses.forEach(a=>{
+          tot+=a.score;maxS+=a.maxScore;
+          if(a.signal==='bull')bullC++;
+          else if(a.signal==='bear')bearC++;
+          else neuC++;
+        });
+        const norm=maxS>0?(tot+maxS)/(maxS*2):0.5;
+        const last=candles[candles.length-1];
+        const prev=candles[candles.length-2];
+        const chg=prev?((last.close-prev.close)/prev.close*100):null;
+        // MA signal
+        const maA=analyses.find(a=>a.title.includes('이동평균'));
+        const macdA=analyses.find(a=>a.title.includes('MACD'));
+        const rsiA=analyses.find(a=>a.title.includes('RSI'));
+        scanResults.push({
+          sym,name:s.n,market:s.m,
+          price:last.close,chg,
+          norm,signal:scoreToSignal(norm),
+          bull:bullC,bear:bearC,neu:neuC,
+          ma:maA?maA.signal:'neutral',
+          macd:macdA?macdA.signal:'neutral',
+          rsi:rsiA?rsiA.signal:'neutral',
+        });
+      }catch(e){}
+      done++;
+      const pct=Math.round(done/total*100);
+      $('progFill').style.width=pct+'%';
+      $('progTxt').textContent=`${done}/${total} 종목 분석 중 (${pct}%)`;
+      renderScanTable();
+    }));
+  }
+  scanResults.sort((a,b)=>b.norm-a.norm);
+  renderScanTable();
+  $('progTxt').textContent=`완료: ${total}개 종목 분석`;
+  $('filterRow').hidden=false;
+  btn.textContent='다시 스캔';btn.disabled=false;
+  scanRunning=false;
+}
+
+function renderScanTable(){
+  const rows=scanResults
+    .sort((a,b)=>b.norm-a.norm)
+    .filter(r=>{
+      if(scanFilter==='all')return true;
+      if(scanFilter==='bull')return r.signal==='bull';
+      if(scanFilter==='bear')return r.signal==='bear';
+      if(scanFilter==='neutral')return r.signal==='neutral';
+      return true;
+    });
+  if(!rows.length){
+    $('scanBody').innerHTML=`<tr><td colspan="10" class="scan-empty">해당 조건의 종목이 없습니다</td></tr>`;
+    return;
+  }
+  $('scanBody').innerHTML=rows.map((r,i)=>`
+    <tr data-sym="${r.sym}">
+      <td class="rank">${i+1}</td>
+      <td class="sname">${r.name}</td>
+      <td class="smkt">${r.market==='KS'?'KOSPI':'KOSDAQ'}</td>
+      <td>${fmt(r.price)}</td>
+      <td style="color:${r.chg>=0?'var(--bull)':'var(--bear)'}">${fmtPct(r.chg)}</td>
+      <td class="score-cell" style="color:${r.signal==='bull'?'var(--bull)':r.signal==='bear'?'var(--bear)':'var(--warn)'}">
+        ${(r.norm*100).toFixed(0)}점
+      </td>
+      <td>${chipHtml(r.signal)}</td>
+      <td>${chipHtml(r.ma)}</td>
+      <td>${chipHtml(r.macd)}</td>
+      <td>${chipHtml(r.rsi)}</td>
+    </tr>`).join('');
+  $('scanBody').querySelectorAll('tr[data-sym]').forEach(tr=>{
+    tr.addEventListener('click',()=>{
+      $('searchInput').value=tr.querySelector('.sname').textContent;
+      $('scanSection').scrollIntoView?$('scanSection').scrollIntoView():null;
+      window.scrollTo(0,0);
+      runAnalysis(tr.dataset.sym);
+    });
+  });
+}
+
+$('scanBtn').addEventListener('click',runScan);
+document.querySelectorAll('#filterRow .fbtn').forEach(btn=>{
+  btn.addEventListener('click',function(){
+    document.querySelectorAll('#filterRow .fbtn').forEach(b=>b.classList.remove('active'));
+    this.classList.add('active');
+    scanFilter=this.dataset.f;
+    renderScanTable();
+  });
+});
+
 // ── 메인 실행 ──────────────────────────────────────────────
 async function runAnalysis(query){
   $('analyzeBtn').disabled=true;
   $('loadingState').hidden=false;
   $('errorState').hidden=true;
   $('results').hidden=true;
+  $('scanSection').hidden=true;
   destroyCharts();
   try{
     const{res,ticker}=await fetchAny(query);
