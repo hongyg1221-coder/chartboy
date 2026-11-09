@@ -1,0 +1,1607 @@
+{
+  "generatedAt": "2026-08-07",
+  "kr": [
+    {
+      "symbol": "005930.KS",
+      "name": "삼성전자"
+    },
+    {
+      "symbol": "000660.KS",
+      "name": "SK하이닉스"
+    },
+    {
+      "symbol": "402340.KS",
+      "name": "SK스퀘어"
+    },
+    {
+      "symbol": "373220.KS",
+      "name": "LG에너지솔루션"
+    },
+    {
+      "symbol": "207940.KS",
+      "name": "삼성바이오로직스"
+    },
+    {
+      "symbol": "105560.KS",
+      "name": "KB금융"
+    },
+    {
+      "symbol": "012450.KS",
+      "name": "한화에어로스페이스"
+    },
+    {
+      "symbol": "005380.KS",
+      "name": "현대자동차"
+    },
+    {
+      "symbol": "028260.KS",
+      "name": "삼성물산"
+    },
+    {
+      "symbol": "329180.KS",
+      "name": "HD현대중공업"
+    },
+    {
+      "symbol": "000270.KS",
+      "name": "기아"
+    },
+    {
+      "symbol": "055550.KS",
+      "name": "신한지주"
+    },
+    {
+      "symbol": "032830.KS",
+      "name": "삼성생명"
+    },
+    {
+      "symbol": "034020.KS",
+      "name": "두산에너빌리티"
+    },
+    {
+      "symbol": "068270.KS",
+      "name": "셀트리온"
+    },
+    {
+      "symbol": "012330.KS",
+      "name": "현대모비스"
+    },
+    {
+      "symbol": "086790.KS",
+      "name": "하나금융지주"
+    },
+    {
+      "symbol": "006400.KS",
+      "name": "삼성SDI"
+    },
+    {
+      "symbol": "035420.KS",
+      "name": "NAVER"
+    },
+    {
+      "symbol": "066570.KS",
+      "name": "LG전자"
+    },
+    {
+      "symbol": "009540.KS",
+      "name": "HD한국조선해양"
+    },
+    {
+      "symbol": "267260.KS",
+      "name": "HD현대일렉트릭"
+    },
+    {
+      "symbol": "042660.KS",
+      "name": "한화오션"
+    },
+    {
+      "symbol": "316140.KS",
+      "name": "우리금융지주"
+    },
+    {
+      "symbol": "005490.KS",
+      "name": "POSCO홀딩스"
+    },
+    {
+      "symbol": "010130.KS",
+      "name": "고려아연"
+    },
+    {
+      "symbol": "051910.KS",
+      "name": "LG화학"
+    },
+    {
+      "symbol": "000150.KS",
+      "name": "두산"
+    },
+    {
+      "symbol": "196170.KQ",
+      "name": "알테오젠"
+    },
+    {
+      "symbol": "138040.KS",
+      "name": "메리츠금융지주"
+    },
+    {
+      "symbol": "011200.KS",
+      "name": "HMM"
+    },
+    {
+      "symbol": "096770.KS",
+      "name": "SK이노베이션"
+    },
+    {
+      "symbol": "000810.KS",
+      "name": "삼성화재해상보험"
+    },
+    {
+      "symbol": "006800.KS",
+      "name": "미래에셋증권"
+    },
+    {
+      "symbol": "010140.KS",
+      "name": "삼성중공업"
+    },
+    {
+      "symbol": "017670.KS",
+      "name": "SK텔레콤"
+    },
+    {
+      "symbol": "042700.KS",
+      "name": "한미반도체"
+    },
+    {
+      "symbol": "035720.KS",
+      "name": "카카오"
+    },
+    {
+      "symbol": "064350.KS",
+      "name": "현대로템"
+    },
+    {
+      "symbol": "267250.KS",
+      "name": "HD현대"
+    },
+    {
+      "symbol": "086280.KS",
+      "name": "현대글로비스"
+    },
+    {
+      "symbol": "010950.KS",
+      "name": "S-Oil"
+    },
+    {
+      "symbol": "015760.KS",
+      "name": "한국전력공사"
+    },
+    {
+      "symbol": "003490.KS",
+      "name": "대한항공"
+    },
+    {
+      "symbol": "033780.KS",
+      "name": "케이티앤지"
+    },
+    {
+      "symbol": "272210.KS",
+      "name": "한화시스템"
+    },
+    {
+      "symbol": "030200.KS",
+      "name": "케이티"
+    },
+    {
+      "symbol": "000720.KS",
+      "name": "현대건설"
+    },
+    {
+      "symbol": "086520.KQ",
+      "name": "에코프로"
+    },
+    {
+      "symbol": "071050.KS",
+      "name": "한국금융지주"
+    },
+    {
+      "symbol": "259960.KS",
+      "name": "크래프톤"
+    },
+    {
+      "symbol": "323410.KS",
+      "name": "카카오뱅크"
+    },
+    {
+      "symbol": "247540.KQ",
+      "name": "에코프로비엠"
+    },
+    {
+      "symbol": "005830.KS",
+      "name": "DB손해보험"
+    },
+    {
+      "symbol": "003670.KS",
+      "name": "포스코퓨처엠"
+    },
+    {
+      "symbol": "009150.KS",
+      "name": "삼성전기"
+    },
+    {
+      "symbol": "326030.KS",
+      "name": "에스케이바이오팜"
+    },
+    {
+      "symbol": "005940.KS",
+      "name": "NH투자증권"
+    },
+    {
+      "symbol": "078930.KS",
+      "name": "GS"
+    },
+    {
+      "symbol": "352820.KS",
+      "name": "하이브"
+    },
+    {
+      "symbol": "006260.KS",
+      "name": "LS"
+    },
+    {
+      "symbol": "161390.KS",
+      "name": "한국타이어앤테크놀로지"
+    },
+    {
+      "symbol": "090430.KS",
+      "name": "아모레퍼시픽"
+    },
+    {
+      "symbol": "016360.KS",
+      "name": "삼성증권"
+    },
+    {
+      "symbol": "010120.KS",
+      "name": "엘에스일렉트릭"
+    },
+    {
+      "symbol": "039490.KS",
+      "name": "키움증권"
+    },
+    {
+      "symbol": "047050.KS",
+      "name": "포스코인터내셔널"
+    },
+    {
+      "symbol": "028050.KS",
+      "name": "삼성E&A"
+    },
+    {
+      "symbol": "021240.KS",
+      "name": "코웨이"
+    },
+    {
+      "symbol": "032640.KS",
+      "name": "LG유플러스"
+    },
+    {
+      "symbol": "009830.KS",
+      "name": "한화솔루션"
+    },
+    {
+      "symbol": "241560.KS",
+      "name": "두산밥캣"
+    },
+    {
+      "symbol": "000100.KS",
+      "name": "유한양행"
+    },
+    {
+      "symbol": "036930.KQ",
+      "name": "주성엔지니어링"
+    },
+    {
+      "symbol": "377300.KS",
+      "name": "카카오페이"
+    },
+    {
+      "symbol": "011070.KS",
+      "name": "LG이노텍"
+    },
+    {
+      "symbol": "271560.KS",
+      "name": "오리온"
+    },
+    {
+      "symbol": "175330.KS",
+      "name": "JB금융지주"
+    },
+    {
+      "symbol": "128940.KS",
+      "name": "한미약품"
+    },
+    {
+      "symbol": "003230.KS",
+      "name": "삼양식품"
+    },
+    {
+      "symbol": "079550.KS",
+      "name": "LIG디펜스앤에어로스페이스"
+    },
+    {
+      "symbol": "028300.KQ",
+      "name": "HLB"
+    },
+    {
+      "symbol": "051900.KS",
+      "name": "LG생활건강"
+    },
+    {
+      "symbol": "034220.KS",
+      "name": "LG디스플레이"
+    },
+    {
+      "symbol": "138930.KS",
+      "name": "BNK금융지주"
+    },
+    {
+      "symbol": "000880.KS",
+      "name": "한화"
+    },
+    {
+      "symbol": "240810.KQ",
+      "name": "원익IPS"
+    },
+    {
+      "symbol": "222800.KQ",
+      "name": "심텍"
+    },
+    {
+      "symbol": "036570.KS",
+      "name": "NC"
+    },
+    {
+      "symbol": "001040.KS",
+      "name": "CJ"
+    },
+    {
+      "symbol": "004020.KS",
+      "name": "현대제철"
+    },
+    {
+      "symbol": "004170.KS",
+      "name": "신세계"
+    },
+    {
+      "symbol": "058470.KQ",
+      "name": "리노공업"
+    },
+    {
+      "symbol": "000250.KQ",
+      "name": "삼천당제약"
+    },
+    {
+      "symbol": "052690.KS",
+      "name": "한전기술"
+    },
+    {
+      "symbol": "000990.KS",
+      "name": "DB하이텍"
+    },
+    {
+      "symbol": "251270.KS",
+      "name": "넷마블"
+    },
+    {
+      "symbol": "036460.KS",
+      "name": "한국가스공사"
+    },
+    {
+      "symbol": "001450.KS",
+      "name": "현대해상"
+    },
+    {
+      "symbol": "097950.KS",
+      "name": "CJ제일제당"
+    },
+    {
+      "symbol": "357780.KQ",
+      "name": "솔브레인"
+    },
+    {
+      "symbol": "214450.KQ",
+      "name": "파마리서치"
+    },
+    {
+      "symbol": "302440.KS",
+      "name": "SK바이오사이언스"
+    },
+    {
+      "symbol": "298040.KS",
+      "name": "효성중공업"
+    },
+    {
+      "symbol": "007660.KS",
+      "name": "이수페타시스"
+    },
+    {
+      "symbol": "141080.KQ",
+      "name": "리가켐바이오"
+    },
+    {
+      "symbol": "011780.KS",
+      "name": "금호석유화학"
+    },
+    {
+      "symbol": "035250.KS",
+      "name": "강원랜드"
+    },
+    {
+      "symbol": "139130.KS",
+      "name": "iM금융지주"
+    },
+    {
+      "symbol": "023530.KS",
+      "name": "롯데쇼핑"
+    },
+    {
+      "symbol": "011790.KS",
+      "name": "SKC"
+    },
+    {
+      "symbol": "375500.KS",
+      "name": "DL이앤씨"
+    },
+    {
+      "symbol": "006360.KS",
+      "name": "GS건설"
+    },
+    {
+      "symbol": "095340.KQ",
+      "name": "ISC"
+    },
+    {
+      "symbol": "282330.KS",
+      "name": "BGF리테일"
+    },
+    {
+      "symbol": "011170.KS",
+      "name": "롯데케미칼"
+    },
+    {
+      "symbol": "161890.KS",
+      "name": "한국콜마"
+    },
+    {
+      "symbol": "014680.KS",
+      "name": "한솔케미칼"
+    },
+    {
+      "symbol": "005290.KQ",
+      "name": "동진쎄미켐"
+    },
+    {
+      "symbol": "257720.KQ",
+      "name": "실리콘투"
+    },
+    {
+      "symbol": "214150.KQ",
+      "name": "클래시스"
+    },
+    {
+      "symbol": "069620.KS",
+      "name": "대웅제약"
+    },
+    {
+      "symbol": "145020.KQ",
+      "name": "휴젤"
+    },
+    {
+      "symbol": "111770.KS",
+      "name": "영원무역"
+    },
+    {
+      "symbol": "383220.KS",
+      "name": "F&F"
+    },
+    {
+      "symbol": "006040.KS",
+      "name": "동원산업"
+    },
+    {
+      "symbol": "028670.KS",
+      "name": "팬오션"
+    },
+    {
+      "symbol": "298050.KS",
+      "name": "HS효성첨단소재"
+    },
+    {
+      "symbol": "007070.KS",
+      "name": "GS리테일"
+    },
+    {
+      "symbol": "004370.KS",
+      "name": "농심"
+    },
+    {
+      "symbol": "192820.KS",
+      "name": "코스맥스"
+    },
+    {
+      "symbol": "263750.KQ",
+      "name": "펄어비스"
+    },
+    {
+      "symbol": "139480.KS",
+      "name": "이마트"
+    },
+    {
+      "symbol": "069960.KS",
+      "name": "현대백화점"
+    },
+    {
+      "symbol": "051600.KS",
+      "name": "한전KPS"
+    },
+    {
+      "symbol": "336260.KS",
+      "name": "두산퓨얼셀"
+    },
+    {
+      "symbol": "039030.KQ",
+      "name": "이오테크닉스"
+    },
+    {
+      "symbol": "403870.KQ",
+      "name": "HPSP"
+    },
+    {
+      "symbol": "185750.KS",
+      "name": "종근당"
+    },
+    {
+      "symbol": "035760.KQ",
+      "name": "CJ ENM"
+    },
+    {
+      "symbol": "030000.KS",
+      "name": "제일기획"
+    },
+    {
+      "symbol": "004990.KS",
+      "name": "롯데지주"
+    },
+    {
+      "symbol": "000120.KS",
+      "name": "CJ대한통운"
+    },
+    {
+      "symbol": "001740.KS",
+      "name": "SK네트웍스"
+    },
+    {
+      "symbol": "140860.KQ",
+      "name": "파크시스템스"
+    },
+    {
+      "symbol": "046890.KQ",
+      "name": "서울반도체"
+    },
+    {
+      "symbol": "064760.KQ",
+      "name": "티씨케이"
+    },
+    {
+      "symbol": "067310.KQ",
+      "name": "하나마이크론"
+    },
+    {
+      "symbol": "004800.KS",
+      "name": "효성"
+    },
+    {
+      "symbol": "047040.KS",
+      "name": "대우건설"
+    },
+    {
+      "symbol": "003540.KS",
+      "name": "대신증권"
+    },
+    {
+      "symbol": "000080.KS",
+      "name": "하이트진로"
+    },
+    {
+      "symbol": "068760.KQ",
+      "name": "셀트리온제약"
+    },
+    {
+      "symbol": "020560.KS",
+      "name": "아시아나항공"
+    },
+    {
+      "symbol": "011210.KS",
+      "name": "현대위아"
+    },
+    {
+      "symbol": "006280.KS",
+      "name": "녹십자"
+    },
+    {
+      "symbol": "294870.KS",
+      "name": "IPARK현대산업개발"
+    },
+    {
+      "symbol": "001120.KS",
+      "name": "LX인터내셔널"
+    },
+    {
+      "symbol": "096530.KQ",
+      "name": "씨젠"
+    },
+    {
+      "symbol": "195940.KQ",
+      "name": "HK이노엔"
+    },
+    {
+      "symbol": "018670.KS",
+      "name": "SK가스"
+    },
+    {
+      "symbol": "460860.KS",
+      "name": "동국제강"
+    },
+    {
+      "symbol": "361610.KS",
+      "name": "SK아이이테크놀로지"
+    },
+    {
+      "symbol": "237690.KQ",
+      "name": "에스티팜"
+    },
+    {
+      "symbol": "090460.KS",
+      "name": "비에이치"
+    },
+    {
+      "symbol": "007310.KS",
+      "name": "오뚜기"
+    },
+    {
+      "symbol": "104830.KQ",
+      "name": "원익머트리얼즈"
+    },
+    {
+      "symbol": "213420.KQ",
+      "name": "덕산네오룩스"
+    },
+    {
+      "symbol": "041830.KQ",
+      "name": "인바디"
+    },
+    {
+      "symbol": "003850.KS",
+      "name": "보령"
+    },
+    {
+      "symbol": "001060.KS",
+      "name": "JW중외제약"
+    },
+    {
+      "symbol": "170900.KS",
+      "name": "동아에스티"
+    },
+    {
+      "symbol": "120110.KS",
+      "name": "코오롱인더"
+    },
+    {
+      "symbol": "000210.KS",
+      "name": "DL"
+    },
+    {
+      "symbol": "105630.KS",
+      "name": "한세실업"
+    },
+    {
+      "symbol": "001680.KS",
+      "name": "대상"
+    },
+    {
+      "symbol": "001800.KS",
+      "name": "오리온홀딩스"
+    },
+    {
+      "symbol": "004690.KS",
+      "name": "삼천리"
+    },
+    {
+      "symbol": "073240.KS",
+      "name": "금호타이어"
+    },
+    {
+      "symbol": "005850.KS",
+      "name": "에스엘"
+    },
+    {
+      "symbol": "041510.KQ",
+      "name": "에스엠"
+    },
+    {
+      "symbol": "225570.KQ",
+      "name": "넥슨게임즈"
+    },
+    {
+      "symbol": "089860.KS",
+      "name": "롯데렌탈"
+    },
+    {
+      "symbol": "093370.KS",
+      "name": "후성"
+    },
+    {
+      "symbol": "006120.KS",
+      "name": "SK디스커버리"
+    },
+    {
+      "symbol": "034230.KS",
+      "name": "파라다이스"
+    },
+    {
+      "symbol": "019170.KS",
+      "name": "신풍제약"
+    },
+    {
+      "symbol": "010780.KS",
+      "name": "아이에스동서"
+    },
+    {
+      "symbol": "051500.KQ",
+      "name": "CJ프레시웨이"
+    },
+    {
+      "symbol": "100090.KS",
+      "name": "SK오션플랜트"
+    },
+    {
+      "symbol": "306200.KS",
+      "name": "세아제강"
+    },
+    {
+      "symbol": "002350.KS",
+      "name": "넥센타이어"
+    },
+    {
+      "symbol": "253450.KQ",
+      "name": "스튜디오드래곤"
+    },
+    {
+      "symbol": "005610.KS",
+      "name": "삼립"
+    },
+    {
+      "symbol": "003240.KS",
+      "name": "태광산업"
+    },
+    {
+      "symbol": "285130.KS",
+      "name": "SK케미칼"
+    },
+    {
+      "symbol": "293490.KQ",
+      "name": "카카오게임즈"
+    },
+    {
+      "symbol": "012630.KS",
+      "name": "HDC"
+    },
+    {
+      "symbol": "001500.KS",
+      "name": "현대차증권"
+    },
+    {
+      "symbol": "000070.KS",
+      "name": "삼양홀딩스"
+    }
+  ],
+  "us": [
+    {
+      "symbol": "NVDA",
+      "name": "NVIDIA Corporation"
+    },
+    {
+      "symbol": "AAPL",
+      "name": "Apple Inc."
+    },
+    {
+      "symbol": "GOOGL",
+      "name": "Alphabet Inc."
+    },
+    {
+      "symbol": "MSFT",
+      "name": "Microsoft Corporation"
+    },
+    {
+      "symbol": "AMZN",
+      "name": "Amazon.com, Inc."
+    },
+    {
+      "symbol": "AVGO",
+      "name": "Broadcom Inc."
+    },
+    {
+      "symbol": "META",
+      "name": "Meta Platforms, Inc."
+    },
+    {
+      "symbol": "TSLA",
+      "name": "Tesla, Inc."
+    },
+    {
+      "symbol": "BRK-B",
+      "name": "Berkshire Hathaway Inc."
+    },
+    {
+      "symbol": "MU",
+      "name": "Micron Technology, Inc."
+    },
+    {
+      "symbol": "JPM",
+      "name": "JPMorgan Chase & Co."
+    },
+    {
+      "symbol": "LLY",
+      "name": "Eli Lilly and Company"
+    },
+    {
+      "symbol": "WMT",
+      "name": "Walmart Inc."
+    },
+    {
+      "symbol": "AMD",
+      "name": "Advanced Micro Devices, Inc."
+    },
+    {
+      "symbol": "V",
+      "name": "Visa Inc."
+    },
+    {
+      "symbol": "XOM",
+      "name": "Exxon Mobil Corporation"
+    },
+    {
+      "symbol": "JNJ",
+      "name": "Johnson & Johnson"
+    },
+    {
+      "symbol": "MA",
+      "name": "Mastercard Incorporated"
+    },
+    {
+      "symbol": "CSCO",
+      "name": "Cisco Systems, Inc."
+    },
+    {
+      "symbol": "BAC",
+      "name": "Bank of America Corporation"
+    },
+    {
+      "symbol": "ABBV",
+      "name": "AbbVie Inc."
+    },
+    {
+      "symbol": "COST",
+      "name": "Costco Wholesale Corporation"
+    },
+    {
+      "symbol": "AMAT",
+      "name": "Applied Materials, Inc."
+    },
+    {
+      "symbol": "ORCL",
+      "name": "Oracle Corporation"
+    },
+    {
+      "symbol": "GE",
+      "name": "GE Aerospace"
+    },
+    {
+      "symbol": "LRCX",
+      "name": "Lam Research Corporation"
+    },
+    {
+      "symbol": "CVX",
+      "name": "Chevron Corporation"
+    },
+    {
+      "symbol": "KO",
+      "name": "The Coca-Cola Company"
+    },
+    {
+      "symbol": "UNH",
+      "name": "UnitedHealth Group Incorporated"
+    },
+    {
+      "symbol": "PLTR",
+      "name": "Palantir Technologies Inc."
+    },
+    {
+      "symbol": "PG",
+      "name": "The Procter & Gamble Company"
+    },
+    {
+      "symbol": "HD",
+      "name": "The Home Depot, Inc."
+    },
+    {
+      "symbol": "MRK",
+      "name": "Merck & Co., Inc."
+    },
+    {
+      "symbol": "NFLX",
+      "name": "Netflix, Inc."
+    },
+    {
+      "symbol": "PM",
+      "name": "Philip Morris International Inc."
+    },
+    {
+      "symbol": "PANW",
+      "name": "Palo Alto Networks, Inc."
+    },
+    {
+      "symbol": "DELL",
+      "name": "Dell Technologies Inc."
+    },
+    {
+      "symbol": "WFC",
+      "name": "Wells Fargo & Company"
+    },
+    {
+      "symbol": "TXN",
+      "name": "Texas Instruments Incorporated"
+    },
+    {
+      "symbol": "KLAC",
+      "name": "KLA Corporation"
+    },
+    {
+      "symbol": "ANET",
+      "name": "Arista Networks, Inc."
+    },
+    {
+      "symbol": "ABT",
+      "name": "Abbott Laboratories"
+    },
+    {
+      "symbol": "GS",
+      "name": "The Goldman Sachs Group, Inc."
+    },
+    {
+      "symbol": "MS",
+      "name": "Morgan Stanley"
+    },
+    {
+      "symbol": "IBM",
+      "name": "International Business Machines Corporation"
+    },
+    {
+      "symbol": "CRWD",
+      "name": "CrowdStrike Holdings, Inc."
+    },
+    {
+      "symbol": "APH",
+      "name": "Amphenol Corporation"
+    },
+    {
+      "symbol": "AXP",
+      "name": "American Express Company"
+    },
+    {
+      "symbol": "ISRG",
+      "name": "Intuitive Surgical, Inc."
+    },
+    {
+      "symbol": "CAT",
+      "name": "Caterpillar Inc."
+    },
+    {
+      "symbol": "RTX",
+      "name": "RTX Corporation"
+    },
+    {
+      "symbol": "MCD",
+      "name": "McDonald's Corporation"
+    },
+    {
+      "symbol": "VZ",
+      "name": "Verizon Communications Inc."
+    },
+    {
+      "symbol": "TMUS",
+      "name": "T-Mobile US, Inc."
+    },
+    {
+      "symbol": "TMO",
+      "name": "Thermo Fisher Scientific Inc."
+    },
+    {
+      "symbol": "PEP",
+      "name": "PepsiCo, Inc."
+    },
+    {
+      "symbol": "MRVL",
+      "name": "Marvell Technology, Inc."
+    },
+    {
+      "symbol": "ADI",
+      "name": "Analog Devices, Inc."
+    },
+    {
+      "symbol": "DIS",
+      "name": "The Walt Disney Company"
+    },
+    {
+      "symbol": "TJX",
+      "name": "The TJX Companies, Inc."
+    },
+    {
+      "symbol": "DHR",
+      "name": "Danaher Corporation"
+    },
+    {
+      "symbol": "QCOM",
+      "name": "QUALCOMM Incorporated"
+    },
+    {
+      "symbol": "SPGI",
+      "name": "S&P Global Inc."
+    },
+    {
+      "symbol": "AMGN",
+      "name": "Amgen Inc."
+    },
+    {
+      "symbol": "UBER",
+      "name": "Uber Technologies, Inc."
+    },
+    {
+      "symbol": "BX",
+      "name": "Blackstone Inc."
+    },
+    {
+      "symbol": "T",
+      "name": "AT&T Inc."
+    },
+    {
+      "symbol": "BKNG",
+      "name": "Booking Holdings Inc."
+    },
+    {
+      "symbol": "SCHW",
+      "name": "The Charles Schwab Corporation"
+    },
+    {
+      "symbol": "BLK",
+      "name": "BlackRock, Inc."
+    },
+    {
+      "symbol": "SYK",
+      "name": "Stryker Corporation"
+    },
+    {
+      "symbol": "BSX",
+      "name": "Boston Scientific Corporation"
+    },
+    {
+      "symbol": "CRM",
+      "name": "Salesforce, Inc."
+    },
+    {
+      "symbol": "C",
+      "name": "Citigroup Inc."
+    },
+    {
+      "symbol": "PGR",
+      "name": "The Progressive Corporation"
+    },
+    {
+      "symbol": "PFE",
+      "name": "Pfizer Inc."
+    },
+    {
+      "symbol": "NEE",
+      "name": "NextEra Energy, Inc."
+    },
+    {
+      "symbol": "HON",
+      "name": "Honeywell International Inc."
+    },
+    {
+      "symbol": "UNP",
+      "name": "Union Pacific Corporation"
+    },
+    {
+      "symbol": "ETN",
+      "name": "Eaton Corporation plc"
+    },
+    {
+      "symbol": "GLW",
+      "name": "Corning Inc"
+    },
+    {
+      "symbol": "VRTX",
+      "name": "Vertex Pharmaceuticals Incorporated"
+    },
+    {
+      "symbol": "BA",
+      "name": "The Boeing Company"
+    },
+    {
+      "symbol": "DE",
+      "name": "Deere & Company"
+    },
+    {
+      "symbol": "COP",
+      "name": "ConocoPhillips"
+    },
+    {
+      "symbol": "GEV",
+      "name": "GE Vernova Inc."
+    },
+    {
+      "symbol": "LOW",
+      "name": "Lowe's Companies, Inc."
+    },
+    {
+      "symbol": "NOW",
+      "name": "ServiceNow, Inc."
+    },
+    {
+      "symbol": "SBUX",
+      "name": "Starbucks Corporation"
+    },
+    {
+      "symbol": "FTNT",
+      "name": "Fortinet, Inc."
+    },
+    {
+      "symbol": "CB",
+      "name": "Chubb Limited"
+    },
+    {
+      "symbol": "MMC",
+      "name": "Marsh & McLennan Companies, Inc."
+    },
+    {
+      "symbol": "MDT",
+      "name": "Medtronic plc"
+    },
+    {
+      "symbol": "GILD",
+      "name": "Gilead Sciences, Inc."
+    },
+    {
+      "symbol": "LMT",
+      "name": "Lockheed Martin Corporation"
+    },
+    {
+      "symbol": "MO",
+      "name": "Altria Group, Inc."
+    },
+    {
+      "symbol": "SNOW",
+      "name": "Snowflake Inc."
+    },
+    {
+      "symbol": "INTC",
+      "name": "Intel Corporation"
+    },
+    {
+      "symbol": "KKR",
+      "name": "KKR & Co. Inc."
+    },
+    {
+      "symbol": "ADP",
+      "name": "Automatic Data Processing, Inc."
+    },
+    {
+      "symbol": "ADBE",
+      "name": "Adobe Inc."
+    },
+    {
+      "symbol": "ICE",
+      "name": "Intercontinental Exchange, Inc."
+    },
+    {
+      "symbol": "BMY",
+      "name": "Bristol-Myers Squibb Company"
+    },
+    {
+      "symbol": "ELV",
+      "name": "Elevance Health, Inc."
+    },
+    {
+      "symbol": "PWR",
+      "name": "Quanta Services, Inc."
+    },
+    {
+      "symbol": "TDG",
+      "name": "TransDigm Group Incorporated"
+    },
+    {
+      "symbol": "PLD",
+      "name": "Prologis, Inc."
+    },
+    {
+      "symbol": "SO",
+      "name": "The Southern Company"
+    },
+    {
+      "symbol": "MCO",
+      "name": "Moody's Corporation"
+    },
+    {
+      "symbol": "HCA",
+      "name": "HCA Healthcare, Inc."
+    },
+    {
+      "symbol": "AMT",
+      "name": "American Tower Corporation"
+    },
+    {
+      "symbol": "MAR",
+      "name": "Marriott International, Inc."
+    },
+    {
+      "symbol": "CDNS",
+      "name": "Cadence Design Systems, Inc."
+    },
+    {
+      "symbol": "CI",
+      "name": "The Cigna Group"
+    },
+    {
+      "symbol": "ABNB",
+      "name": "Airbnb, Inc."
+    },
+    {
+      "symbol": "CME",
+      "name": "CME Group Inc."
+    },
+    {
+      "symbol": "COF",
+      "name": "Capital One Financial Corporation"
+    },
+    {
+      "symbol": "ZTS",
+      "name": "Zoetis Inc."
+    },
+    {
+      "symbol": "UPS",
+      "name": "United Parcel Service, Inc."
+    },
+    {
+      "symbol": "WM",
+      "name": "Waste Management, Inc."
+    },
+    {
+      "symbol": "PH",
+      "name": "Parker-Hannifin Corporation"
+    },
+    {
+      "symbol": "TT",
+      "name": "Trane Technologies plc"
+    },
+    {
+      "symbol": "DUK",
+      "name": "Duke Energy Corporation"
+    },
+    {
+      "symbol": "DASH",
+      "name": "DoorDash, Inc."
+    },
+    {
+      "symbol": "MCK",
+      "name": "McKesson Corporation"
+    },
+    {
+      "symbol": "APO",
+      "name": "Apollo Global Management, Inc."
+    },
+    {
+      "symbol": "CMCSA",
+      "name": "Comcast Corporation"
+    },
+    {
+      "symbol": "INTU",
+      "name": "Intuit Inc."
+    },
+    {
+      "symbol": "AON",
+      "name": "Aon plc"
+    },
+    {
+      "symbol": "CVS",
+      "name": "CVS Health Corporation"
+    },
+    {
+      "symbol": "NOC",
+      "name": "Northrop Grumman Corporation"
+    },
+    {
+      "symbol": "EQIX",
+      "name": "Equinix, Inc."
+    },
+    {
+      "symbol": "DDOG",
+      "name": "Datadog, Inc."
+    },
+    {
+      "symbol": "ROST",
+      "name": "Ross Stores, Inc."
+    },
+    {
+      "symbol": "MDLZ",
+      "name": "Mondelez International, Inc."
+    },
+    {
+      "symbol": "USB",
+      "name": "U.S. Bancorp"
+    },
+    {
+      "symbol": "MMM",
+      "name": "3M Company"
+    },
+    {
+      "symbol": "ITW",
+      "name": "Illinois Tool Works Inc."
+    },
+    {
+      "symbol": "GD",
+      "name": "General Dynamics Corporation"
+    },
+    {
+      "symbol": "MSI",
+      "name": "Motorola Solutions, Inc."
+    },
+    {
+      "symbol": "GM",
+      "name": "General Motors Company"
+    },
+    {
+      "symbol": "SNPS",
+      "name": "Synopsys, Inc."
+    },
+    {
+      "symbol": "ORLY",
+      "name": "O'Reilly Automotive, Inc."
+    },
+    {
+      "symbol": "PNC",
+      "name": "The PNC Financial Services Group, Inc."
+    },
+    {
+      "symbol": "EMR",
+      "name": "Emerson Electric Co."
+    },
+    {
+      "symbol": "PYPL",
+      "name": "PayPal Holdings, Inc."
+    },
+    {
+      "symbol": "AJG",
+      "name": "Arthur J. Gallagher & Co."
+    },
+    {
+      "symbol": "CL",
+      "name": "Colgate-Palmolive Company"
+    },
+    {
+      "symbol": "HLT",
+      "name": "Hilton Worldwide Holdings Inc."
+    },
+    {
+      "symbol": "REGN",
+      "name": "Regeneron Pharmaceuticals, Inc."
+    },
+    {
+      "symbol": "HPE",
+      "name": "Hewlett Packard Enterprise Company"
+    },
+    {
+      "symbol": "BK",
+      "name": "The Bank of New York Mellon Corporation"
+    },
+    {
+      "symbol": "CSX",
+      "name": "CSX Corporation"
+    },
+    {
+      "symbol": "NSC",
+      "name": "Norfolk Southern Corporation"
+    },
+    {
+      "symbol": "FDX",
+      "name": "FedEx Corporation"
+    },
+    {
+      "symbol": "HWM",
+      "name": "Howmet Aerospace Inc."
+    },
+    {
+      "symbol": "EOG",
+      "name": "EOG Resources, Inc."
+    },
+    {
+      "symbol": "WMB",
+      "name": "The Williams Companies, Inc."
+    },
+    {
+      "symbol": "SHW",
+      "name": "The Sherwin-Williams Company"
+    },
+    {
+      "symbol": "APD",
+      "name": "Air Products and Chemicals, Inc."
+    },
+    {
+      "symbol": "ECL",
+      "name": "Ecolab Inc."
+    },
+    {
+      "symbol": "WELL",
+      "name": "Welltower Inc."
+    },
+    {
+      "symbol": "COIN",
+      "name": "Coinbase Global, Inc."
+    },
+    {
+      "symbol": "NKE",
+      "name": "NIKE, Inc."
+    },
+    {
+      "symbol": "TER",
+      "name": "Teradyne, Inc."
+    },
+    {
+      "symbol": "TFC",
+      "name": "Truist Financial Corporation"
+    },
+    {
+      "symbol": "TRV",
+      "name": "The Travelers Companies, Inc."
+    },
+    {
+      "symbol": "CARR",
+      "name": "Carrier Global Corporation"
+    },
+    {
+      "symbol": "SLB",
+      "name": "Schlumberger Limited"
+    },
+    {
+      "symbol": "AXON",
+      "name": "Axon Enterprise, Inc."
+    },
+    {
+      "symbol": "FICO",
+      "name": "Fair Isaac Corporation"
+    },
+    {
+      "symbol": "KEYS",
+      "name": "Keysight Technologies, Inc."
+    },
+    {
+      "symbol": "MET",
+      "name": "MetLife, Inc."
+    },
+    {
+      "symbol": "ALL",
+      "name": "The Allstate Corporation"
+    },
+    {
+      "symbol": "BDX",
+      "name": "Becton, Dickinson and Company"
+    },
+    {
+      "symbol": "CMI",
+      "name": "Cummins Inc."
+    },
+    {
+      "symbol": "JCI",
+      "name": "Johnson Controls International plc"
+    },
+    {
+      "symbol": "URI",
+      "name": "United Rentals, Inc."
+    },
+    {
+      "symbol": "LHX",
+      "name": "L3Harris Technologies, Inc."
+    },
+    {
+      "symbol": "PSX",
+      "name": "Phillips 66"
+    },
+    {
+      "symbol": "MPC",
+      "name": "Marathon Petroleum Corporation"
+    },
+    {
+      "symbol": "KMI",
+      "name": "Kinder Morgan, Inc."
+    },
+    {
+      "symbol": "OKE",
+      "name": "ONEOK, Inc."
+    },
+    {
+      "symbol": "FCX",
+      "name": "Freeport-McMoRan Inc."
+    },
+    {
+      "symbol": "PSA",
+      "name": "Public Storage"
+    },
+    {
+      "symbol": "SPG",
+      "name": "Simon Property Group, Inc."
+    },
+    {
+      "symbol": "DLR",
+      "name": "Digital Realty Trust, Inc."
+    },
+    {
+      "symbol": "AEP",
+      "name": "American Electric Power Company, Inc."
+    },
+    {
+      "symbol": "SRE",
+      "name": "Sempra"
+    },
+    {
+      "symbol": "RBLX",
+      "name": "Roblox Corporation"
+    },
+    {
+      "symbol": "ARES",
+      "name": "Ares Management Corporation"
+    },
+    {
+      "symbol": "AMP",
+      "name": "Ameriprise Financial, Inc."
+    },
+    {
+      "symbol": "F",
+      "name": "Ford Motor Company"
+    },
+    {
+      "symbol": "AZO",
+      "name": "AutoZone, Inc."
+    },
+    {
+      "symbol": "TGT",
+      "name": "Target Corporation"
+    },
+    {
+      "symbol": "AIG",
+      "name": "American International Group, Inc."
+    },
+    {
+      "symbol": "DFS",
+      "name": "Discover Financial Services"
+    },
+    {
+      "symbol": "O",
+      "name": "Realty Income Corporation"
+    },
+    {
+      "symbol": "EBAY",
+      "name": "eBay Inc."
+    },
+    {
+      "symbol": "PRU",
+      "name": "Prudential Financial, Inc."
+    }
+  ]
+}

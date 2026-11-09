@@ -40,6 +40,23 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(f'{{"error":"{e}"}}'.encode())
 
+        # /stocks → scan-universe.json 반환
+        elif self.path == '/stocks':
+            try:
+                with open('scan-universe.json', 'rb') as f:
+                    data = f.read()
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(data)
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(f'{{"error":"{e}"}}'.encode())
+
         # /search/query → Yahoo Finance 종목 검색
         elif self.path.startswith('/search/'):
             raw = self.path[8:]

@@ -992,14 +992,30 @@ async function runScan(){
   $('scanSection').hidden=false;
   $('scanProgress').hidden=false;
   $('filterRow').hidden=true;
+  $('scanBody').innerHTML=`<tr><td colspan="10" class="scan-empty">종목 목록 불러오는 중...</td></tr>`;
+
+  // scan-universe.json에서 종목 목록 로드
+  let universe=[];
+  try{
+    const r=await fetch('/stocks');
+    const d=await r.json();
+    universe=(d.kr||[]).map(s=>({
+      c:s.symbol.replace(/\.(KS|KQ)$/,''),
+      n:s.name,
+      m:s.symbol.endsWith('.KQ')?'KQ':'KS',
+    }));
+  }catch(e){}
+  // 로드 실패 시 하드코딩 목록으로 폴백
+  if(!universe.length) universe=STOCKS;
+
   $('scanBody').innerHTML=`<tr><td colspan="10" class="scan-empty">분석 중...</td></tr>`;
 
-  const total=STOCKS.length;
+  const total=universe.length;
   let done=0;
 
   const BATCH=6;
   for(let i=0;i<total;i+=BATCH){
-    const batch=STOCKS.slice(i,i+BATCH);
+    const batch=universe.slice(i,i+BATCH);
     await Promise.all(batch.map(async s=>{
       const sym=`${s.c}.${s.m}`;
       try{
