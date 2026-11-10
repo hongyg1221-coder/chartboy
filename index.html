@@ -325,6 +325,7 @@ body{
 <script>
 // ── 종목 DB ──────────────────────────────────────────────
 const STOCKS=[
+  {c:'^KS11',n:'코스피 지수',m:'IDX',sym:'^KS11'},{c:'^KQ11',n:'코스닥 지수',m:'IDX',sym:'^KQ11'},
   {c:'005930',n:'삼성전자',m:'KS'},{c:'000660',n:'SK하이닉스',m:'KS'},
   {c:'373220',n:'LG에너지솔루션',m:'KS'},{c:'207940',n:'삼성바이오로직스',m:'KS'},
   {c:'005380',n:'현대차',m:'KS'},{c:'000270',n:'기아',m:'KS'},
@@ -396,7 +397,7 @@ const STOCKS=[
   {c:'048260',n:'오스코텍',m:'KQ'},{c:'376300',n:'디어유',m:'KQ'},
   {c:'468530',n:'프로티나',m:'KQ'},
 ];
-const QUICK=['삼성전자','SK하이닉스','에코프로','카카오','NAVER'];
+const QUICK=['삼성전자','SK하이닉스','에코프로','카카오','NAVER','코스피 지수','코스닥 지수'];
 
 // ── 유틸 ─────────────────────────────────────────────────
 const $=id=>document.getElementById(id);
@@ -1012,10 +1013,44 @@ function analyzePattern(candles){
     }
   }
 
+  // 월봉 삼각패턴 (8개월 이상 데이터 필요)
+  if(mn>=8){
+    const seg=months.slice(-Math.min(12,mn));
+    const sn=seg.length;
+    const mhs=seg.map(m=>m.high),mls=seg.map(m=>m.low);
+    const slpM=arr=>{
+      const N=arr.length,sx=N*(N-1)/2,sy=arr.reduce((a,b)=>a+b,0);
+      const sxy=arr.reduce((s,v,i)=>s+i*v,0),sx2=arr.reduce((s,_,i)=>s+i*i,0);
+      return(N*sxy-sx*sy)/(N*sx2-sx*sx);
+    };
+    const hSlp=slpM(mhs),lSlp=slpM(mls);
+    const hMean=mhs.reduce((a,b)=>a+b,0)/sn;
+    const hPct=hSlp/hMean*100,lPct=lSlp/hMean*100;
+    const rngAll=Math.max(...mhs)-Math.min(...mls);
+    const rng3=Math.max(...mhs.slice(-3))-Math.min(...mls.slice(-3));
+    const mconv=rngAll>0?(rngAll-rng3)/rngAll*100:0;
+    if(mconv>20){
+      const flat=p=>Math.abs(p)<0.3,up=p=>p>0.3,dn=p=>p<-0.3;
+      const resTop=Math.max(...mhs.slice(-3));
+      const supBot=Math.min(...mls.slice(-3));
+      if(flat(hPct)&&up(lPct)){
+        det.push(`📐 월봉 상승삼각형 (${mconv.toFixed(0)}% 수렴) — 상단 돌파 시 강한 상승 신호`);sc+=2;
+        if(cl[n-1]>resTop){det.push('🔥 월봉 상승삼각형 상단 돌파!');sc+=2;}
+      }else if(dn(hPct)&&flat(lPct)){
+        det.push(`📐 월봉 하강삼각형 (${mconv.toFixed(0)}% 수렴) — 하단 이탈 주의`);sc-=2;
+        if(cl[n-1]<supBot){det.push('💀 월봉 하강삼각형 하단 이탈!');sc-=2;}
+      }else if(dn(hPct)&&up(lPct)){
+        det.push(`📐 월봉 대칭삼각형 (${mconv.toFixed(0)}% 수렴) — 큰 방향성 돌파 임박`);sc+=1;
+        if(cl[n-1]>resTop){det.push('🔥 월봉 대칭삼각형 상단 돌파 → 매수 신호!');sc+=2;}
+        else if(cl[n-1]<supBot){det.push('💀 월봉 대칭삼각형 하단 이탈 → 매도 신호!');sc-=2;}
+      }
+    }
+  }
+
   if(!det.length)det.push('특별한 패턴 없음 (추세 관찰 중)');
   const sg=sc>0?'bull':sc<0?'bear':'neutral';
   return{id:'pat',title:'차트 패턴',signal:sg,score:Math.max(-3,Math.min(3,sc)),
-    summary:'최근 60일 패턴 분석',details:det};
+    summary:'최근 60일 + 월봉 패턴 분석',details:det};
 }
 
 function analyzeVolume(candles){
@@ -1156,7 +1191,7 @@ function runAll(candles){
 }
 
 // ── 데이터 로드 ────────────────────────────────────────────
-async function fetchYF(sym,range='6mo'){
+async function fetchYF(sym,range='2y'){
   // server.py가 /api/ 경로로 Yahoo Finance를 대신 요청해 줌
   const url=`/api/${sym}?interval=1d&range=${range}`;
   const ctrl=new AbortController();
@@ -1184,11 +1219,12 @@ function parseCandles(res){
 
 function resolveTickers(q){
   const t=q.trim();
+  if(t.startsWith('^'))return[t];
   if(t.endsWith('.KS')||t.endsWith('.KQ'))return[t];
   if(/^\d{6}$/.test(t))return[`${t}.KS`,`${t}.KQ`];
   const tl=t.toLowerCase();
   const m=STOCKS.find(s=>s.n.toLowerCase()===tl||s.n.includes(t)||s.c===t);
-  if(m)return[`${m.c}.${m.m}`];
+  if(m)return[m.sym||`${m.c}.${m.m}`];
   return[t,`${t}.KS`,`${t}.KQ`];
 }
 
@@ -1508,7 +1544,7 @@ function renderSugs(list, q){
   el.innerHTML=list.slice(0,10).map((s,i)=>`
     <div class="sug-item" data-i="${i}" data-t="${s.sym||s.c+'.'+s.m}">
       <div><span class="sug-name">${highlight(s.n,q)}</span><span class="sug-code"> · ${s.c}</span></div>
-      <span class="sug-mkt">${s.m==='KS'?'KOSPI':'KOSDAQ'}</span>
+      <span class="sug-mkt">${s.m==='KS'?'KOSPI':s.m==='IDX'?'지수':'KOSDAQ'}</span>
     </div>`).join('');
   el.hidden=false;
   el.querySelectorAll('.sug-item').forEach(it=>it.addEventListener('mousedown',e=>{
