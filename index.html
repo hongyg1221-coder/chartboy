@@ -1346,6 +1346,23 @@ function analyzePattern(candles){
     }
   }
 
+  // 월봉 장기 하락패턴 ↔ 단기 상승패턴 충돌 시 경고 텍스트 수정
+  const hasMonthlyBear=det.some(d=>d.includes('헤드앤숄더')&&d.includes('월봉'));
+  const hasMonthlyBull=det.some(d=>d.includes('역헤드앤숄더')&&d.includes('월봉'));
+  if(hasMonthlyBear){
+    const idx=det.findIndex(d=>d.includes('3묶음 완성 후 반등'));
+    if(idx!==-1)det[idx]='⚠️ 단기 3묶음 반등 감지 — 단, 월봉 삼봉(헤드앤숄더) 하락 구조 내 일시 반등 가능성. 추세 추종 주의!';
+    // 기타 단기 강세 메시지도 완화
+    det.forEach((d,i)=>{
+      if(d.startsWith('✅')&&(d.includes('매수타점')||d.includes('반등 확인'))){
+        det[i]=d.replace('✅','⚠️').replace('매수타점','단기 타점(월봉 하락 추세 주의)');
+      }
+    });
+  }
+  if(hasMonthlyBull){
+    const idx=det.findIndex(d=>d.includes('3묶음 진행 중'));
+    if(idx!==-1)det[idx]='📌 단기 하락 진행 중이나 월봉 역삼봉 상승 반전 구조 확인 중 — 바닥 근처 가능성';
+  }
   if(!det.length)det.push('특별한 패턴 없음 (추세 관찰 중)');
   const sg=sc>0?'bull':sc<0?'bear':'neutral';
   return{id:'pat',title:'차트 패턴',signal:sg,score:Math.max(-3,Math.min(3,sc)),

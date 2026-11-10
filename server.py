@@ -40,7 +40,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(f'{{"error":"{e}"}}'.encode())
 
-        # /investor/005930 → 네이버 금융 투자자별 매매동향
+        # /investor/005930 → 네이버 증권 투자자별 순매수 (stock.naver.com 신규 API)
         elif self.path.startswith('/investor/'):
             import re as _re, json as _json
             code = self.path[10:].split('?')[0].strip()
@@ -51,41 +51,28 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(b'{"error":"invalid code"}')
                 return
-            url = f'https://finance.naver.com/item/sise_investor.naver?code={code}'
+            url = f'https://stock.naver.com/api/stockSecurity/investor-trend/v2/domestic/{code}?exchangeType=krx&size=5'
             try:
                 req = urllib.request.Request(url, headers={
                     'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'Accept':'text/html,application/xhtml+xml',
+                    'Accept':'application/json',
                     'Accept-Language':'ko-KR,ko;q=0.9',
                     'Referer':'https://finance.naver.com/',
                 })
                 with urllib.request.urlopen(req, timeout=10) as resp:
-                    html = resp.read().decode('euc-kr', errors='replace')
-                # 최근 5일치 행 파싱
-                rows = _re.findall(
-                    r'<td[^>]*class="[^"]*date[^"]*"[^>]*>\s*(\d{4}\.\d{2}\.\d{2})\s*</td>(.*?)</tr>',
-                    html, _re.DOTALL
-                )
-                result = {'error': 'no data'}
+                    raw = _json.loads(resp.read().decode('utf-8'))
                 days = []
-                for date_str, cells in rows[:5]:
-                    nums = _re.findall(r'[>]\s*([+\-]?[\d,]+)\s*[<]', cells)
-                    vals = []
-                    for n in nums:
-                        n = n.strip()
-                        if _re.match(r'^[+\-]?\d[\d,]*$', n):
-                            try: vals.append(int(n.replace(',','')))
-                            except: pass
-                    if len(vals) >= 3:
-                        days.append({
-                            'date': date_str,
-                            'individual': vals[0],
-                            'foreign': vals[1],
-                            'institution': vals[2],
-                            'pension': vals[9] if len(vals) > 9 else 0,
-                        })
-                if days:
-                    result = {'days': days}
+                for item in (raw.get('items') or [])[:5]:
+                    krx = item.get('krx') or {}
+                    def iv(k): return int(krx.get(k, '0').replace(',','')) if krx.get(k) else 0
+                    days.append({
+                        'date': item.get('localTradedAt',''),
+                        'individual': iv('individualNetVolume'),
+                        'foreign': iv('foreignNetVolume'),
+                        'institution': iv('organizationNetVolume'),
+                        'pension': 0,
+                    })
+                result = {'days': days} if days else {'error': 'no data'}
                 self.send_response(200)
                 self.send_header('Content-Type','application/json; charset=utf-8')
                 self.send_header('Access-Control-Allow-Origin','*')
