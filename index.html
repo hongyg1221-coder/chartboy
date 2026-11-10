@@ -1364,8 +1364,9 @@ function chipHtml(sig){
   return`<span class="chip-sm chip ${sig}">${label}</span>`;
 }
 
-async function runScan(){
+async function runScan(pushHistory=true){
   if(scanRunning)return;
+  if(pushHistory===true) history.pushState({page:'scan'}, '', '?scan=1');
   scanRunning=true;
   scanResults=[];
   const btn=$('scanBtn');
@@ -1477,14 +1478,13 @@ function renderScanTable(){
   $('scanBody').querySelectorAll('tr[data-sym]').forEach(tr=>{
     tr.addEventListener('click',()=>{
       $('searchInput').value=tr.querySelector('.sname').textContent;
-      $('scanSection').scrollIntoView?$('scanSection').scrollIntoView():null;
       window.scrollTo(0,0);
       runAnalysis(tr.dataset.sym);
     });
   });
 }
 
-$('scanBtn').addEventListener('click',runScan);
+$('scanBtn').addEventListener('click',()=>runScan());
 document.querySelectorAll('#filterRow .fbtn').forEach(btn=>{
   btn.addEventListener('click',function(){
     document.querySelectorAll('#filterRow .fbtn').forEach(b=>b.classList.remove('active'));
@@ -1494,8 +1494,47 @@ document.querySelectorAll('#filterRow .fbtn').forEach(btn=>{
   });
 });
 
+// ── History API (뒤로가기 지원) ──────────────────────────────
+function restoreScanView(){
+  $('results').hidden=true;
+  $('scanSection').hidden=false;
+  $('scanProgress').hidden=true;
+  $('filterRow').hidden=false;
+  destroyCharts();
+  renderScanTable();
+  window.scrollTo(0,0);
+}
+
+window.addEventListener('popstate',e=>{
+  const s=e.state;
+  if(!s||s.page==='home'){
+    $('results').hidden=true;
+    $('scanSection').hidden=true;
+    $('searchInput').value='';
+    destroyCharts();
+    return;
+  }
+  if(s.page==='scan'){
+    if(scanResults.length) restoreScanView();
+    else runScan(false);
+    return;
+  }
+  if(s.page==='analysis'){
+    $('searchInput').value=s.query||'';
+    runAnalysis(s.query,false);
+  }
+});
+
+// 초기 상태 설정 + URL 파라미터 처리
+history.replaceState({page:'home'},'',location.href);
+(()=>{
+  const p=new URLSearchParams(location.search);
+  if(p.has('q')) runAnalysis(decodeURIComponent(p.get('q')),false);
+})();
+
 // ── 메인 실행 ──────────────────────────────────────────────
-async function runAnalysis(query){
+async function runAnalysis(query, pushHistory=true){
+  if(pushHistory) history.pushState({page:'analysis',query}, '', '?q='+encodeURIComponent(query));
   $('analyzeBtn').disabled=true;
   $('loadingState').hidden=false;
   $('errorState').hidden=true;
