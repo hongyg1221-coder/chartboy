@@ -1551,6 +1551,28 @@ async function doSearch(q){
 
   renderSugs(ms.slice(0,10), q);
 
+  // 6자리 숫자 입력 시 .KS/.KQ 직접 조회
+  if(/^\d{6}$/.test(q)){
+    try{
+      const markets=['KQ','KS'];
+      for(const m of markets){
+        const sym=`${q}.${m}`;
+        const localSet=new Set(ms.map(s=>(s.sym||s.c+'.'+s.m)));
+        if(localSet.has(sym)) continue;
+        const r=await fetch(`/api/${sym}?interval=1d&range=5d`);
+        const d=await r.json();
+        const meta=d?.chart?.result?.[0]?.meta;
+        if(meta?.regularMarketPrice){
+          const name=meta.longName||meta.shortName||sym;
+          ms.push({c:q,n:name,m,sym});
+          renderSugs(ms.slice(0,10),q);
+          break; // 하나 찾으면 중단
+        }
+      }
+    }catch(e){}
+    return;
+  }
+
   // 로컬 결과가 적으면 Yahoo Finance 보완
   if(ms.length<5&&!isAllCho){
     try{
