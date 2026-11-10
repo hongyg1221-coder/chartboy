@@ -141,6 +141,45 @@ body{
   border-left:3px solid var(--accent);color:var(--fg);font-size:12px;line-height:1.6
 }
 
+/* 현재 봉 상태 카드 */
+.candle-state-card{
+  background:var(--surface);border-radius:12px;border:1px solid var(--border);
+  padding:16px 18px;margin-bottom:16px
+}
+.candle-state-header{
+  display:flex;align-items:center;gap:10px;margin-bottom:10px
+}
+.candle-state-type{
+  font-size:15px;font-weight:700;
+}
+.candle-state-type.bull{color:var(--bull)}
+.candle-state-type.bear{color:var(--bear)}
+.candle-state-type.neutral{color:var(--warn)}
+.candle-state-change{font-size:13px;font-weight:600}
+.candle-state-change.bull{color:var(--bull)}
+.candle-state-change.bear{color:var(--bear)}
+.candle-state-bars{
+  display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap
+}
+.candle-bar-item{
+  display:flex;flex-direction:column;gap:3px;min-width:90px;flex:1
+}
+.candle-bar-label{font-size:11px;color:var(--dim)}
+.candle-bar-track{
+  height:6px;background:var(--surface2);border-radius:3px;overflow:hidden
+}
+.candle-bar-fill{height:100%;border-radius:3px;transition:width .3s}
+.candle-bar-fill.bull{background:var(--bull)}
+.candle-bar-fill.bear{background:var(--bear)}
+.candle-bar-fill.neutral{background:var(--warn)}
+.candle-bar-val{font-size:11px;color:var(--dim)}
+.candle-state-narrative{
+  font-size:13px;line-height:1.75;color:var(--fg);
+  padding:12px 14px;background:var(--surface2);
+  border-radius:8px;border-left:3px solid var(--accent)
+}
+.candle-state-narrative strong{color:var(--fg)}
+
 /* Chart */
 .chart-sec{
   background:var(--surface);border-radius:12px;border:1px solid var(--border);
@@ -277,6 +316,7 @@ body{
       <div class="chart-label">RSI (14일) — 과매수 70 / 과매도 30</div>
       <div style="position:relative;height:100px"><canvas id="cRsi"></canvas></div>
     </div>
+    <div id="candleStateCard"></div>
     <div class="grid" id="grid"></div>
     <div class="data-note" id="dataNote"></div>
   </section>
@@ -615,6 +655,132 @@ function analyzeCandle(candles){
   const sg=sc>0?'bull':sc<0?'bear':'neutral';
   return{id:'candle',title:'캔들 패턴',signal:sg,score:Math.max(-3,Math.min(3,sc)),
     summary:found.length?`${found.length}개 패턴 감지`:'특별 패턴 없음',details:det};
+}
+
+function analyzeCandleState(candles){
+  const n=candles.length;
+  if(n<2)return null;
+  const c=candles[n-1],p=candles[n-2];
+  const body=Math.abs(c.close-c.open);
+  const range=c.high-c.low;
+  if(range===0)return null;
+  const bodyRatio=body/range;
+  const upper=c.high-Math.max(c.open,c.close);
+  const lower=Math.min(c.open,c.close)-c.low;
+  const upperPct=upper/range*100;
+  const lowerPct=lower/range*100;
+  const isBull=c.close>=c.open;
+  const change=(c.close-p.close)/p.close*100;
+
+  // 평균 거래량 (최근 20일, 오늘 제외)
+  const slice=candles.slice(Math.max(0,n-21),n-1);
+  const avgVol=slice.length?slice.reduce((s,x)=>s+x.volume,0)/slice.length:0;
+  const volRatio=avgVol>0?c.volume/avgVol:1;
+
+  // 봉 종류 판별
+  let typeKo,typeClass;
+  if(bodyRatio<0.1){typeKo='도지형';typeClass='neutral';}
+  else if(isBull){
+    typeClass='bull';
+    if(bodyRatio>0.7&&upperPct<5&&lowerPct<5)typeKo='장대양봉 (청봉)';
+    else if(bodyRatio>0.7&&lowerPct<5)typeKo='밑꼬리없는 장대양봉';
+    else if(bodyRatio>0.7&&upperPct<5)typeKo='윗꼬리없는 장대양봉';
+    else if(bodyRatio>0.7)typeKo='장대양봉';
+    else if(lowerPct>40&&bodyRatio<0.35)typeKo='망치형 양봉';
+    else if(upperPct>40&&bodyRatio<0.35){typeKo='역망치형 양봉';typeClass='neutral';}
+    else if(bodyRatio>0.4)typeKo='양봉';
+    else typeKo='소양봉';
+  }else{
+    typeClass='bear';
+    if(bodyRatio>0.7&&upperPct<5&&lowerPct<5)typeKo='장대음봉 (흑봉)';
+    else if(bodyRatio>0.7&&upperPct<5)typeKo='윗꼬리없는 장대음봉';
+    else if(bodyRatio>0.7&&lowerPct<5)typeKo='밑꼬리없는 장대음봉';
+    else if(bodyRatio>0.7)typeKo='장대음봉';
+    else if(upperPct>40&&bodyRatio<0.35){typeKo='뚜껑형(슈팅스타)';typeClass='bear';}
+    else if(lowerPct>40&&bodyRatio<0.35){typeKo='역뚜껑형';typeClass='neutral';}
+    else if(bodyRatio>0.4)typeKo='음봉';
+    else typeKo='소음봉';
+  }
+
+  // 나레이션 생성
+  const parts=[];
+  parts.push(`오늘은 <strong>${typeKo}</strong>이 나왔습니다.`);
+
+  if(isBull){
+    if(bodyRatio>0.7)parts.push('시가부터 종가까지 강하게 밀어올린 형태로, 매수 세력이 압도적으로 우위였습니다.');
+    else parts.push('장중 등락이 있었지만 결국 양봉으로 마감했습니다.');
+  }else{
+    if(bodyRatio>0.7)parts.push('시가부터 종가까지 계속 밀린 형태로, 매도 압력이 강하게 작용했습니다.');
+    else parts.push('장중 등락이 있었지만 결국 음봉으로 마감했습니다.');
+  }
+
+  if(upperPct>35){
+    if(isBull)parts.push(`위꼬리가 ${upperPct.toFixed(0)}% 비율로 길게 달렸습니다. 고점에서 매물이 쏟아져 추가 상승에 저항이 있다는 의미입니다.`);
+    else parts.push(`위꼬리가 ${upperPct.toFixed(0)}% 달렸지만 고점을 지키지 못하고 밀렸습니다. 위에 매물대가 강합니다.`);
+  }else if(upperPct<5&&isBull){
+    parts.push('위꼬리가 거의 없이 고점 근처에서 종가를 형성했습니다. 매수세가 끝까지 강했다는 의미입니다.');
+  }
+
+  if(lowerPct>35){
+    parts.push(`아래꼬리가 ${lowerPct.toFixed(0)}% 비율로 길게 달렸습니다. 장중 저점에서 매수 세력이 받쳐줬다는 뜻으로, 하방 지지력이 있습니다.`);
+  }else if(lowerPct<5&&!isBull&&bodyRatio>0.6){
+    parts.push('아래꼬리가 거의 없이 저점 근처에서 마감했습니다. 하락 중 매수 세력 개입이 없어 하락 압력이 강합니다.');
+  }
+
+  if(volRatio>2){
+    parts.push(`거래량이 평균의 ${volRatio.toFixed(1)}배로 급증했습니다. ${isBull?'거래량을 동반한 상승은 세력의 강한 매집 신호일 수 있습니다.':'거래량을 동반한 하락은 세력의 매도 신호일 수 있습니다.'}`);
+  }else if(volRatio<0.5){
+    parts.push(`거래량이 평균의 ${(volRatio*100).toFixed(0)}% 수준으로 적습니다. 힘이 실리지 않은 움직임으로, 추세로 보기엔 근거가 약합니다.`);
+  }
+
+  // 전일 대비 비교
+  const prevBull=p.close>=p.open;
+  const prevBody=Math.abs(p.close-p.open);
+  if(!isBull&&prevBull&&body>prevBody*1.3){
+    parts.push('전일 양봉을 오늘 음봉이 완전히 덮는 하락 장악형입니다. 단기 추세 전환 주의가 필요합니다.');
+  }else if(isBull&&!prevBull&&body>prevBody*1.3){
+    parts.push('전일 음봉을 오늘 양봉이 완전히 덮는 상승 장악형입니다. 반전 신호로 볼 수 있습니다.');
+  }
+
+  return{typeKo,typeClass,isBull,change,bodyRatio,upperPct,lowerPct,volRatio,narrative:parts.join(' ')};
+}
+
+function renderCandleState(candles){
+  const st=analyzeCandleState(candles);
+  const el=$('candleStateCard');
+  if(!st){el.innerHTML='';return;}
+  const chSign=st.change>=0?'+':'';
+  const chClass=st.change>=0?'bull':'bear';
+  el.innerHTML=`
+  <div class="candle-state-card">
+    <div class="candle-state-header">
+      <span class="candle-state-type ${st.typeClass}">${st.isBull?'🟢':'🔴'} 오늘의 봉 — ${st.typeKo}</span>
+      <span class="candle-state-change ${chClass}">${chSign}${st.change.toFixed(2)}%</span>
+    </div>
+    <div class="candle-state-bars">
+      <div class="candle-bar-item">
+        <span class="candle-bar-label">몸통 비율</span>
+        <div class="candle-bar-track"><div class="candle-bar-fill ${st.typeClass}" style="width:${(st.bodyRatio*100).toFixed(0)}%"></div></div>
+        <span class="candle-bar-val">${(st.bodyRatio*100).toFixed(0)}%</span>
+      </div>
+      <div class="candle-bar-item">
+        <span class="candle-bar-label">위꼬리</span>
+        <div class="candle-bar-track"><div class="candle-bar-fill bear" style="width:${st.upperPct.toFixed(0)}%"></div></div>
+        <span class="candle-bar-val">${st.upperPct.toFixed(0)}%</span>
+      </div>
+      <div class="candle-bar-item">
+        <span class="candle-bar-label">아래꼬리</span>
+        <div class="candle-bar-track"><div class="candle-bar-fill bull" style="width:${st.lowerPct.toFixed(0)}%"></div></div>
+        <span class="candle-bar-val">${st.lowerPct.toFixed(0)}%</span>
+      </div>
+      <div class="candle-bar-item">
+        <span class="candle-bar-label">거래량 (평균 대비)</span>
+        <div class="candle-bar-track"><div class="candle-bar-fill neutral" style="width:${Math.min(100,st.volRatio*50).toFixed(0)}%"></div></div>
+        <span class="candle-bar-val">${st.volRatio.toFixed(1)}배</span>
+      </div>
+    </div>
+    <div class="candle-state-narrative">${st.narrative}</div>
+  </div>`;
 }
 
 function analyzePattern(candles){
@@ -1653,6 +1819,7 @@ async function runAnalysis(query, pushHistory=true){
     const analyses=runAll(candles);
     renderHeader(res.meta,candles);
     renderOverall(analyses);
+    renderCandleState(candles);
     renderGrid(analyses);
     $('results').hidden=false;
     renderPrice(candles);
