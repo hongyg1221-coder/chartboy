@@ -498,10 +498,11 @@ function ichimoku(candles){
 // ── 분석 모듈 ──────────────────────────────────────────────
 function analyzeMA(candles){
   const cl=candles.map(c=>c.close);
-  const ma5=sma(cl,5),ma20=sma(cl,20),ma60=sma(cl,60),ma120=sma(cl,120);
+  const ma5=sma(cl,5),ma20=sma(cl,20),ma60=sma(cl,60),ma120=sma(cl,120),ma240=sma(cl,240);
   const n=cl.length-1;
-  const[cv,m5,m20,m60,m120]=[cl[n],ma5[n],ma20[n],ma60[n],ma120[n]];
+  const[cv,m5,m20,m60,m120,m240]=[cl[n],ma5[n],ma20[n],ma60[n],ma120[n],ma240[n]];
   const[pm5,pm20]=[ma5[n-1],ma20[n-1]];
+  const curC=candles[n];
   let sc=0,det=[];
 
   if(m5&&m20&&m60){
@@ -521,9 +522,25 @@ function analyzeMA(candles){
     const pct=(cv-m20)/m20*100;
     if(pct<3)det.push(`📌 20선 눌림목 근처 (+${pct.toFixed(1)}%)`);
   }
+  // 240일선 (장기 추세 기준선)
+  if(m240){
+    if(cv>m240){det.push(`✅ 240일선(${fmt(m240)}) 위 — 장기 추세 강세`);sc+=1;}
+    else{
+      const pct=((m240-cv)/m240*100).toFixed(1);
+      det.push(`❌ 240일선(${fmt(m240)}) 아래 — 장기 추세 약세 (${pct}% 하회)`);sc-=1;
+    }
+  }
+  // 이평선 전부 잡아먹음 감지 (오늘 한 봉에 5·20·60선 모두 돌파)
+  if(m5&&m20&&m60&&curC){
+    const openedBelow=curC.open<m5&&curC.open<m20&&curC.open<m60;
+    const closedAbove=cv>m5&&cv>m20&&cv>m60;
+    if(openedBelow&&closedAbove){
+      det.push('🔥 이평선 전부 잡아먹음! (5·20·60선 한 봉에 돌파) → 강한 매수 신호');sc+=2;
+    }
+  }
   const sg=sc>0?'bull':sc<0?'bear':'neutral';
   return{id:'ma',title:'이동평균선',signal:sg,score:Math.max(-3,Math.min(3,sc)),
-    summary:`MA5: ${m5?fmt(m5):'-'} | MA20: ${m20?fmt(m20):'-'} | MA60: ${m60?fmt(m60):'-'}`,
+    summary:`MA5: ${m5?fmt(m5):'-'} | MA20: ${m20?fmt(m20):'-'} | MA60: ${m60?fmt(m60):'-'}${m240?` | MA240: ${fmt(m240)}`:''}`,
     details:det};
 }
 
@@ -930,6 +947,10 @@ function analyzeCandleState(candles){
   // 연속 상승 중 도지 → 고점 경계
   if(prevDir===1&&prevStreak>=3&&bodyRatio<0.2&&nearHigh){
     oparts.push(`⚠️ 연속 상승 후 고점 근처에서 도지 형성 — 단기 고점 가능성을 경계해야 합니다.`);
+  }
+  // 가짜 돌파 경고 — 갭 상승 출발로 저항선을 넘은 경우
+  if(gapUp&&isBull&&gapPct>1.5){
+    oparts.push(`⚠️ <strong>가짜 돌파 주의:</strong> 오늘 갭 상승(+${gapPct.toFixed(1)}%)으로 출발했습니다. 저항선·매수타점을 장중 매수 압력이 아닌 갭으로 뛰어넘은 경우, 의미 있는 돌파로 보기 어렵습니다. 매수타점이 오늘 시가보다 낮았다면 진짜 돌파가 아닙니다.`);
   }
 
   // 이동평균선 맥락 + 핵심 관찰 가격
@@ -1414,6 +1435,18 @@ function analyzePattern(candles){
   if(hasMonthlyBull){
     const idx=det.findIndex(d=>d.includes('3묶음 진행 중'));
     if(idx!==-1)det[idx]='📌 단기 하락 진행 중이나 월봉 역삼봉 상승 반전 구조 확인 중 — 바닥 근처 가능성';
+  }
+  // 월봉 20선 위치 (중기 추세 핵심 기준)
+  if(mn>=20){
+    const mCl=months.map(m=>m.close);
+    const mMA20=mCl.slice(mn-20).reduce((s,v)=>s+v,0)/20;
+    const cur=cl[cl.length-1];
+    if(cur>mMA20){
+      det.push(`📌 월봉 20선(${fmt(mMA20)}) 위 — 중기 추세 강세`);sc+=1;
+    }else{
+      const gap=((mMA20-cur)/mMA20*100).toFixed(1);
+      det.push(`⚠️ 월봉 20선(${fmt(mMA20)}) 아래 (${gap}% 하회) — 중기 추세 약세, 월봉 20선 회복이 추세 전환 조건`);sc-=1;
+    }
   }
   if(!det.length)det.push('특별한 패턴 없음 (추세 관찰 중)');
   const sg=sc>0?'bull':sc<0?'bear':'neutral';
