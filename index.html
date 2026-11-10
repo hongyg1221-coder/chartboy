@@ -862,15 +862,30 @@ function analyzeCandleState(candles){
       }
     }
   }else{
+    // 소/일반 음봉 — 전일 시가 대비 오늘 종가 위치로 추가 판단
+    const closeAbovePrevOpen=c.close>=p.open;
+    const prevOpenFmt=Math.round(p.open).toLocaleString();
     if(gapDown){
-      oparts.push(`갭 하락 출발 후 음봉 마감입니다. 이미 하락을 선반영했을 수 있으나, 지지선 근처인지를 확인해야 합니다. 지지선 위라면 단기 반등 가능성도 있습니다.`);
-      outlookClass='bear';
+      if(closeAbovePrevOpen&&volRatio<0.8){
+        oparts.push(`갭 하락으로 출발했지만, 종가가 전일 시가(${prevOpenFmt})를 하향 돌파하지 않았습니다. 거래량도 평소의 ${(volRatio*100).toFixed(0)}% 수준으로 매도 압력이 강하지 않아, <strong>하락보다는 단순 조정</strong>으로 볼 수 있습니다.`);
+        outlookClass='neutral';
+      }else{
+        oparts.push(`갭 하락 출발 후 음봉 마감입니다. 이미 하락을 선반영했을 수 있으나, 지지선 근처인지를 확인해야 합니다. 지지선 위라면 단기 반등 가능성도 있습니다.`);
+        outlookClass='bear';
+      }
     }else{
       if(volRatio>=1.5){
         oparts.push(`음봉이지만 거래량이 평소 대비 ${volRatio.toFixed(1)}배로 급증했습니다. 거래량을 동반한 하락은 매도 세력의 강한 출회 신호일 수 있어, 단기 추가 하락 가능성을 주의해야 합니다.`);
         outlookClass='bear';
+      }else if(closeAbovePrevOpen&&volRatio<0.8){
+        const openNote=c.open<p.close?`오늘 시가가 전일 종가보다 소폭 낮게 출발했지만`:`전일 종가 수준에서 출발했지만`;
+        oparts.push(`음봉으로 마감했으나, ${openNote} <strong>종가가 전일 시가(${prevOpenFmt})를 하향 돌파하지 않았습니다.</strong> 거래량도 평소의 ${(volRatio*100).toFixed(0)}% 수준으로 매도 압력이 약합니다. 이는 의미 있는 하락이라기보다 <strong>단순 조정</strong>으로 볼 수 있어 하락으로 단정 짓기 어렵습니다.`);
+        outlookClass='neutral';
+      }else if(closeAbovePrevOpen){
+        oparts.push(`음봉으로 마감했으나 종가가 전일 시가(${prevOpenFmt})를 하향 돌파하지 않았습니다. 중요한 하락 신호로 보기는 어려우나, 거래량 추이를 지켜볼 필요가 있습니다.`);
+        outlookClass='neutral';
       }else{
-        oparts.push(`음봉 마감으로 단기 주의가 필요합니다. 다만 거래량이 평소 대비 ${(volRatio*100).toFixed(0)}% 수준으로 힘이 실리지 않아, 강한 하락 추세보다는 단순 조정일 가능성도 있습니다.`);
+        oparts.push(`음봉 마감이며 종가가 전일 시가(${prevOpenFmt})를 하향 돌파했습니다. 거래량이 평소의 ${(volRatio*100).toFixed(0)}% 수준으로 적으나, 가격 레벨 자체가 낮아진 점은 단기 주의가 필요합니다. 다음 날 추가 하락 여부로 추세를 확인하세요.`);
         outlookClass='bear';
       }
     }
