@@ -282,6 +282,7 @@ body{
     <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;align-items:center">
       <button class="scan-btn active-mkt" id="scanBtn" data-mkt="kr">🇰🇷 한국 스캔</button>
       <button class="scan-btn" id="scanBtnUs" data-mkt="us">🇺🇸 미국 스캔</button>
+      <button class="scan-btn" id="buyEntryBtn" data-mkt="entry" style="border-color:#f59e0b;color:#f59e0b">🎯 매수타점</button>
     </div>
   </header>
 
@@ -310,6 +311,39 @@ body{
         </thead>
         <tbody id="scanBody">
           <tr><td colspan="10" class="scan-empty">전체 스캔 버튼을 눌러주세요</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 매수타점 스캔 섹션 -->
+  <section id="buyEntrySection" hidden>
+    <div class="scan-hd">
+      <h2>🎯 오늘의 매수타점 — 차트보이 방식</h2>
+      <div style="font-size:12px;color:var(--dim);margin-left:4px">
+        240일선·구름대·전고점·주봉20선 돌파 직전 종목 / 갭상승(가짜돌파) 경고 포함
+      </div>
+      <div class="scan-progress" id="beScanProgress" hidden>
+        <div class="prog-bar"><div class="prog-fill" id="beProgFill" style="width:0%"></div></div>
+        <div class="prog-txt" id="beProgTxt">준비 중...</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <button class="fbtn active" id="beFilterAll" onclick="filterBuyEntry('all')">전체</button>
+      <button class="fbtn" id="beFilterBreak" onclick="filterBuyEntry('broke')" style="color:var(--bull)">✅ 오늘 돌파</button>
+      <button class="fbtn" id="beFilterNear" onclick="filterBuyEntry('near')" style="color:var(--warn)">📌 돌파 임박</button>
+      <button class="fbtn" id="beFilterGap" onclick="filterBuyEntry('gap')" style="color:var(--bear)">⚠️ 갭상승주의</button>
+    </div>
+    <div class="scan-wrap">
+      <table class="scan-table" id="buyEntryTable">
+        <thead>
+          <tr>
+            <th>#</th><th>종목명</th><th>시장</th><th>현재가</th>
+            <th>매수타점</th><th>거리</th><th>타점종류</th><th>상태</th><th>종합점수</th>
+          </tr>
+        </thead>
+        <tbody id="buyEntryBody">
+          <tr><td colspan="9" class="scan-empty">🎯 매수타점 버튼을 눌러주세요</td></tr>
         </tbody>
       </table>
     </div>
@@ -2234,6 +2268,246 @@ function chipHtml(sig){
 
 let scanMarket='kr'; // 'kr' | 'us'
 
+// ── 매수타점 계산 ──────────────────────────────────────────────
+function calcBuyEntry(candles){
+  if(!candles||candles.length<30)return null;
+  const cl=candles.map(c=>c.close);
+  const lo=candles.map(c=>c.low);
+  const hi=candles.map(c=>c.high);
+  const n=cl.length-1;
+  const cur=cl[n];
+  const today=candles[n];
+  const prev=candles[n-1];
+  if(!cur||cur<=0)return null;
+
+  const gapPct=prev?(today.open-prev.close)/prev.close*100:0;
+  const isGapUp=gapPct>1.5;
+  const levels=[];
+
+  function tryAdd(level,type,priority){
+    if(!level||isNaN(level)||level<=0)return;
+    const dist=(level-cur)/cur*100; // 양수=현재가 위, 음수=현재가 아래
+    if(dist>-2&&dist<=7){
+      const brokeToday=prev&&prev.close<level&&cur>=level&&!isGapUp;
+      const gapAbove=isGapUp&&today.open>level*0.98;
+      levels.push({level,type,dist,brokeToday,gapAbove,priority:priority||5});
+    }
+  }
+
+  // 1. MA선
+  const smav=(arr,len)=>arr.length>=len?arr.slice(-len).reduce((s,v)=>s+v,0)/len:null;
+  const ma20v=smav(cl,20),ma60v=smav(cl,60),ma120v=smav(cl,120),ma240v=smav(cl,240);
+  if(ma240v)tryAdd(ma240v,'240일선',1);
+  if(ma120v)tryAdd(ma120v,'120일선',2);
+  if(ma60v)tryAdd(ma60v,'60일선',3);
+  if(ma20v)tryAdd(ma20v,'20일선',4);
+
+  // 2. 전고점
+  if(n>=20){
+    const hi20=Math.max(...hi.slice(Math.max(0,n-20),n));
+    tryAdd(hi20,'전고점(20일)',2);
+  }
+  if(n>=60){
+    const hi60=Math.max(...hi.slice(Math.max(0,n-60),n));
+    const hi20=n>=20?Math.max(...hi.slice(Math.max(0,n-20),n)):0;
+    if(Math.abs(hi60-hi20)/hi60>0.01)tryAdd(hi60,'전고점(60일)',2);
+  }
+
+  // 3. 구름대 상단
+  if(n>=78){
+    try{
+      const sl9=candles.slice(n-34,n-25),sl26=candles.slice(n-51,n-25),sl52=candles.slice(Math.max(0,n-77),n-25);
+      if(sl9.length&&sl26.length&&sl52.length>=50){
+        const tk26=(Math.max(...sl9.map(c=>c.high))+Math.min(...sl9.map(c=>c.low)))/2;
+        const kj26=(Math.max(...sl26.map(c=>c.high))+Math.min(...sl26.map(c=>c.low)))/2;
+        const sA=(tk26+kj26)/2;
+        const sB=(Math.max(...sl52.map(c=>c.high))+Math.min(...sl52.map(c=>c.low)))/2;
+        tryAdd(Math.max(sA,sB),'구름대 상단',1);
+      }
+    }catch(e){}
+  }
+
+  // 4. 주봉 20선
+  const weeks=aggregateWeekly(candles);
+  if(weeks&&weeks.length>=20){
+    const wCl=weeks.map(w=>w.close);
+    const wma20=wCl.slice(-20).reduce((s,v)=>s+v,0)/20;
+    tryAdd(wma20,'주봉 20선',1);
+  }
+
+  // 5. 연속 동일고점
+  if(n>=8){
+    const seg=candles.slice(-10);
+    const segH=seg.map(c=>c.high);
+    const maxH=Math.max(...segH);
+    const nearMax=segH.filter(h=>h>=maxH*0.99);
+    if(nearMax.length>=3)tryAdd(maxH,`동일고점(${nearMax.length}회)`,2);
+  }
+
+  if(!levels.length)return null;
+
+  // 정렬: 오늘 돌파 → 거리 가까운 순 → 중요도
+  levels.sort((a,b)=>{
+    if(a.brokeToday&&!b.brokeToday)return -1;
+    if(!a.brokeToday&&b.brokeToday)return 1;
+    const da=Math.abs(a.dist),db=Math.abs(b.dist);
+    if(Math.abs(da-db)>0.5)return da-db;
+    return a.priority-b.priority;
+  });
+
+  return{cur,gapPct,isGapUp,levels:levels.slice(0,3)};
+}
+
+// ── 매수타점 스캔 ──────────────────────────────────────────────
+let buyEntryResults=[];
+let buyEntryRunning=false;
+let beFilter='all';
+
+function filterBuyEntry(f){
+  beFilter=f;
+  document.querySelectorAll('#buyEntrySection .fbtn').forEach(b=>b.classList.remove('active'));
+  const idMap={all:'beFilterAll',broke:'beFilterBreak',near:'beFilterNear',gap:'beFilterGap'};
+  if($( idMap[f]))$(idMap[f]).classList.add('active');
+  renderBuyEntryTable();
+}
+
+function renderBuyEntryTable(){
+  let rows=buyEntryResults.slice();
+  if(beFilter==='broke')rows=rows.filter(r=>r.brokeToday);
+  else if(beFilter==='near')rows=rows.filter(r=>!r.brokeToday&&!r.gapAbove);
+  else if(beFilter==='gap')rows=rows.filter(r=>r.gapAbove);
+
+  if(!rows.length){
+    $('buyEntryBody').innerHTML=`<tr><td colspan="9" class="scan-empty">해당 조건의 종목이 없습니다</td></tr>`;
+    return;
+  }
+  $('buyEntryBody').innerHTML=rows.map((r,i)=>{
+    const lv=r.levels[0];
+    const distTxt=lv.brokeToday
+      ?`<span style="color:var(--bull);font-weight:700">✅ 오늘 돌파!</span>`
+      :lv.gapAbove
+        ?`<span style="color:var(--bear)">⚠️ 갭상승</span>`
+        :`<span style="color:var(--warn)">${lv.dist.toFixed(1)}% 남음</span>`;
+    const extraLevels=r.levels.slice(1).map(l=>`<div style="font-size:10px;color:var(--dim)">${l.type} ${fmt(l.level)}</div>`).join('');
+    const statusChip=lv.brokeToday
+      ?`<span class="chip bull">🔥 돌파</span>`
+      :lv.gapAbove
+        ?`<span class="chip bear">⚠️ 가짜돌파</span>`
+        :`<span class="chip neutral">📌 접근</span>`;
+    const normPct=(r.norm*100).toFixed(0);
+    const normColor=r.norm>=0.65?'var(--bull)':r.norm<=0.4?'var(--bear)':'var(--warn)';
+    return`<tr data-sym="${r.sym}" style="cursor:pointer">
+      <td class="rank">${i+1}</td>
+      <td class="sname">${r.name}</td>
+      <td class="smkt">${r.market==='KS'?'KOSPI':r.market==='KQ'?'KOSDAQ':'미국'}</td>
+      <td>${fmt(r.price)}</td>
+      <td style="font-weight:600">${fmt(lv.level)}${extraLevels}</td>
+      <td>${distTxt}</td>
+      <td style="font-size:12px">${lv.type}</td>
+      <td>${statusChip}</td>
+      <td style="color:${normColor}">${normPct}점</td>
+    </tr>`;
+  }).join('');
+  $('buyEntryBody').querySelectorAll('tr[data-sym]').forEach(tr=>{
+    tr.addEventListener('click',()=>{
+      $('searchInput').value=tr.querySelector('.sname').textContent;
+      window.scrollTo(0,0);
+      runAnalysis(tr.dataset.sym);
+    });
+  });
+}
+
+async function runBuyEntry(){
+  if(buyEntryRunning)return;
+  buyEntryRunning=true;
+  buyEntryResults=[];
+  beFilter='all';
+
+  // 버튼 상태
+  document.querySelectorAll('.scan-btn').forEach(b=>b.classList.remove('active-mkt'));
+  $('buyEntryBtn').classList.add('active-mkt');
+  $('buyEntryBtn').style.borderColor='var(--accent)';
+  $('buyEntryBtn').style.color='var(--accent)';
+  $('buyEntryBtn').textContent='분석 중...';
+  $('buyEntryBtn').disabled=true;
+  document.querySelectorAll('.scan-btn:not(#buyEntryBtn)').forEach(b=>b.disabled=true);
+
+  $('scanSection').hidden=true;
+  $('buyEntrySection').hidden=false;
+  $('beScanProgress').hidden=false;
+  $('buyEntryBody').innerHTML=`<tr><td colspan="9" class="scan-empty">종목 목록 불러오는 중...</td></tr>`;
+
+  // 종목 목록: KR + US 전체
+  let universe=[];
+  try{
+    const r=await fetch('/stocks');
+    const d=await r.json();
+    const kr=(d.kr||[]).map(s=>({c:s.symbol.replace(/\.(KS|KQ)$/,''),n:s.name,m:s.symbol.endsWith('.KQ')?'KQ':'KS',sym:s.symbol}));
+    const us=(d.us||[]).map(s=>({c:s.symbol,n:s.name,m:'US',sym:s.symbol}));
+    universe=[...kr,...us];
+  }catch(e){}
+  if(!universe.length)universe=STOCKS.map(s=>({...s,sym:`${s.c}.${s.m}`}));
+
+  const total=universe.length;
+  let done=0;
+  const BATCH=6;
+
+  $('buyEntryBody').innerHTML=`<tr><td colspan="9" class="scan-empty">분석 중...</td></tr>`;
+
+  for(let i=0;i<total;i+=BATCH){
+    const batch=universe.slice(i,i+BATCH);
+    await Promise.all(batch.map(async s=>{
+      const sym=s.sym||`${s.c}.${s.m}`;
+      try{
+        const res=await fetchYF(sym,'2y');
+        const candles=parseCandles(res);
+        if(candles.length<30)return;
+        const be=calcBuyEntry(candles);
+        if(!be)return; // 매수타점 없으면 제외
+        // 종합점수도 계산
+        const analyses=runAll(candles);
+        let tot=0;
+        analyses.forEach(a=>tot+=a.score);
+        const maxS=analyses.length*3;
+        const norm=(tot+maxS)/(maxS*2);
+        const lv=be.levels[0];
+        buyEntryResults.push({
+          sym,name:s.n,market:s.m,
+          price:be.cur,gapPct:be.gapPct,isGapUp:be.isGapUp,
+          levels:be.levels,
+          brokeToday:lv.brokeToday,
+          gapAbove:lv.gapAbove,
+          dist:lv.dist,
+          norm,
+        });
+      }catch(e){}
+      done++;
+      const pct=Math.round(done/total*100);
+      $('beProgFill').style.width=pct+'%';
+      $('beProgTxt').textContent=`${done}/${total} 종목 분석 중 (${pct}%)`;
+      // 실시간 정렬: 오늘 돌파 → 거리 가까운 순 → 종합점수
+      buyEntryResults.sort((a,b)=>{
+        if(a.brokeToday&&!b.brokeToday)return -1;
+        if(!a.brokeToday&&b.brokeToday)return 1;
+        if(a.gapAbove&&!b.gapAbove)return 1;
+        if(!a.gapAbove&&b.gapAbove)return -1;
+        const da=Math.abs(a.dist),db=Math.abs(b.dist);
+        if(Math.abs(da-db)>0.3)return da-db;
+        return b.norm-a.norm;
+      });
+      renderBuyEntryTable();
+    }));
+  }
+
+  $('beProgTxt').textContent=`완료: ${buyEntryResults.length}개 매수타점 종목 발견 (전체 ${total}개 중)`;
+  $('buyEntryBtn').textContent='🎯 매수타점';
+  $('buyEntryBtn').disabled=false;
+  $('buyEntryBtn').style.borderColor='#f59e0b';
+  $('buyEntryBtn').style.color='#f59e0b';
+  document.querySelectorAll('.scan-btn:not(#buyEntryBtn)').forEach(b=>b.disabled=false);
+  buyEntryRunning=false;
+}
+
 async function runScan(mkt, pushHistory=true){
   if(scanRunning)return;
   scanMarket=mkt||scanMarket;
@@ -2248,6 +2522,7 @@ async function runScan(mkt, pushHistory=true){
   const otherBtn=scanMarket==='us'?$('scanBtn'):$('scanBtnUs');
   btn.textContent='스캔 중...';btn.disabled=true;
   otherBtn.disabled=true;
+  $('buyEntrySection').hidden=true;
   $('scanSection').hidden=false;
   $('scanProgress').hidden=false;
   $('filterRow').hidden=true;
@@ -2372,6 +2647,7 @@ function renderScanTable(){
 
 $('scanBtn').addEventListener('click',()=>runScan('kr'));
 $('scanBtnUs').addEventListener('click',()=>runScan('us'));
+$('buyEntryBtn').addEventListener('click',()=>runBuyEntry());
 document.querySelectorAll('#filterRow .fbtn').forEach(btn=>{
   btn.addEventListener('click',function(){
     document.querySelectorAll('#filterRow .fbtn').forEach(b=>b.classList.remove('active'));
