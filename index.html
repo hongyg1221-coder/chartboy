@@ -45,18 +45,22 @@ body{
 }
 #searchInput:focus{border-color:var(--accent)}
 #suggestions{
-  position:absolute;top:100%;left:0;right:0;background:var(--surface2);
-  border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;
-  z-index:100;max-height:220px;overflow-y:auto
+  position:absolute;top:calc(100% + 2px);left:0;right:0;background:var(--surface2);
+  border:1px solid var(--border);border-radius:8px;
+  z-index:100;max-height:280px;overflow-y:auto;
+  box-shadow:0 8px 24px rgba(0,0,0,.4)
 }
 .sug-item{
   padding:9px 14px;cursor:pointer;display:flex;justify-content:space-between;
-  align-items:center;gap:8px
+  align-items:center;gap:8px;border-bottom:1px solid var(--border)
 }
-.sug-item:hover{background:var(--border)}
+.sug-item:last-child{border-bottom:none}
+.sug-item:hover,.sug-item.active{background:var(--border)}
 .sug-name{font-weight:500}
+.sug-name mark{background:transparent;color:var(--accent);font-weight:700}
 .sug-code{font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
 .sug-mkt{font-size:10px;padding:2px 6px;border-radius:4px;background:var(--border);color:var(--dim)}
+.sug-no-result{padding:12px 14px;color:var(--dim);font-size:13px;text-align:center}
 #analyzeBtn{
   background:var(--accent);color:#0a0e17;border:none;padding:10px 20px;
   border-radius:8px;font-size:14px;font-family:inherit;font-weight:700;
@@ -329,8 +333,8 @@ const QUICK=['삼성전자','SK하이닉스','에코프로','카카오','NAVER']
 
 // ── 유틸 ─────────────────────────────────────────────────
 const $=id=>document.getElementById(id);
-const fmt=(n,d=0)=>n==null?'-':n.toLocaleString('ko-KR',{maximumFractionDigits:d});
-const fmtPct=n=>(n>=0?'+':'')+n.toFixed(2)+'%';
+const fmt=(n,d=0)=>n==null?'—':n.toLocaleString('ko-KR',{maximumFractionDigits:d});
+const fmtPct=n=>n==null?'—':(n>=0?'+':'')+n.toFixed(2)+'%';
 
 // ── 기술적 지표 계산 ──────────────────────────────────────
 function sma(arr,p){
@@ -556,6 +560,26 @@ function analyzeCandle(candles){
     if(a.close>a.open&&b.close>b.open&&c.close<c.open&&c.close>a.open){
       found.push({n:'양양음 패턴 (매수 유지)',s:'bull',w:'최근3봉'});sc++;}
   }
+  // 관통형 / 상승 장악형 (일봉)
+  if(n>=2){
+    const pv=candles[n-2],cv=candles[n-1];
+    const pvBear=pv.close<pv.open,cvBull=cv.close>=cv.open;
+    if(pvBear&&cvBull){
+      const pvMid=(pv.open+pv.close)/2;
+      // 완전 장악형: 현재 양봉이 전 음봉 몸통 전체를 감쌈
+      if(cv.open<=pv.close&&cv.close>=pv.open){
+        found.push({n:'상승 장악형 (강한 반전!)',s:'bull',w:'오늘'});sc+=3;
+      // 관통형: 전 음봉 몸통의 절반 이상을 덮는 양봉
+      }else if(cv.open<=pv.close&&cv.close>pvMid){
+        found.push({n:'관통형 (반전 가능)',s:'bull',w:'오늘'});sc+=2;
+      }
+    }
+    // 하락 장악형: 현재 음봉이 전 양봉을 감쌈
+    const pvBull2=pv.close>=pv.open,cvBear2=cv.close<cv.open;
+    if(pvBull2&&cvBear2&&cv.open>=pv.close&&cv.close<=pv.open){
+      found.push({n:'하락 장악형 (강한 하락 신호!)',s:'bear',w:'오늘'});sc-=3;
+    }
+  }
 
   found.forEach(p=>{
     const ico=p.s==='bull'?'✅':p.s==='bear'?'❌':'ℹ️';
@@ -638,6 +662,163 @@ function analyzePattern(candles){
     if(hammers>=2){det.push('✅ 연속 망치형(빵빵빵) → 바닥 신호!');sc+=2;}
   }
 
+  // 삼중바닥 (매수타점 #4) - 3번의 비슷한 저점
+  if(n>=60){
+    const seg=candles.slice(-60),lows=seg.map(c=>c.low),mins3=[];
+    for(let i=2;i<lows.length-2;i++)
+      if(lows[i]<lows[i-1]&&lows[i]<lows[i-2]&&lows[i]<lows[i+1]&&lows[i]<lows[i+2])
+        mins3.push({i,v:lows[i]});
+    if(mins3.length>=3){
+      const[ta,tb,tc]=mins3.slice(-3);
+      if(tc.i>tb.i+5&&tb.i>ta.i+5){
+        const mx3=Math.max(ta.v,tb.v,tc.v),mn3=Math.min(ta.v,tb.v,tc.v);
+        const d3=(mx3-mn3)/mn3*100;
+        if(d3<4){det.push(`✅ 삼중바닥 패턴 (저점 편차 ${d3.toFixed(1)}%) → 강한 바닥 지지`);sc+=2;}
+      }
+    }
+  }
+  // W 가운데자리(네크라인) 돌파 (상승종목 #3)
+  if(n>=40){
+    const seg=candles.slice(-40),lows=seg.map(c=>c.low),mins4=[];
+    for(let i=2;i<lows.length-2;i++)
+      if(lows[i]<lows[i-1]&&lows[i]<lows[i-2]&&lows[i]<lows[i+1]&&lows[i]<lows[i+2])
+        mins4.push({i,v:lows[i]});
+    if(mins4.length>=2){
+      const[wa,wb]=mins4.slice(-2);
+      if(Math.abs(wa.v-wb.v)/wa.v*100<5&&wb.i>wa.i+5){
+        const between=seg.slice(wa.i,wb.i);
+        const nk=Math.max(...between.map(c=>c.high));
+        const cur=cl[n-1],pre=cl[n-2];
+        if(pre<=nk&&cur>nk){det.push(`🔥 W 가운데자리(네크라인 ${fmt(nk)}) 돌파! → 강한 매수`);sc+=3;}
+        else if(cur>nk*0.98&&cur<=nk){det.push(`📌 W 네크라인(${fmt(nk)}) 돌파 직전`);}
+      }
+    }
+  }
+  // 연속캔들 동일고점 돌파 (매수타점 #11)
+  if(n>=5){
+    const r3highs=candles.slice(-4,-1).map(c=>c.high);
+    const hMax=Math.max(...r3highs),hMin=Math.min(...r3highs);
+    const hdiff=(hMax-hMin)/hMax*100;
+    if(hdiff<0.8){
+      if(cl[n-1]>hMax){det.push(`🔥 연속캔들 동일고점(${fmt(hMax)}) 돌파! → 매수 신호`);sc+=3;}
+      else{det.push(`📌 연속캔들 동일고점 저항 형성 중 (편차 ${hdiff.toFixed(1)}%)`);sc++;}
+    }
+  }
+  // 삼각수렴 (매수타점 #14) - 고점 하락 + 저점 상승
+  if(n>=20){
+    const seg=candles.slice(-20);
+    const hs=seg.map(c=>c.high),ls=seg.map(c=>c.low);
+    const slp=(arr)=>{const N=arr.length,sx=N*(N-1)/2,sy=arr.reduce((a,b)=>a+b,0),sxy=arr.reduce((s,v,i)=>s+i*v,0),sx2=arr.reduce((s,_,i)=>s+i*i,0);return(N*sxy-sx*sy)/(N*sx2-sx*sx);};
+    const hs5=hs.slice(-5),ls5=ls.slice(-5);
+    if(slp(hs)<0&&slp(ls)>0){
+      const rng20=Math.max(...hs)-Math.min(...ls),rng5=Math.max(...hs5)-Math.min(...ls5);
+      const conv=(rng20-rng5)/rng20*100;
+      if(conv>25){
+        det.push(`⚡ 삼각수렴 (${conv.toFixed(0)}% 수렴) → 큰 움직임 임박`);sc++;
+        if(cl[n-1]>Math.max(...hs5)){det.push('🔥 삼각수렴 상단 돌파 → 매수 신호!');sc+=2;}
+        else if(cl[n-1]<Math.min(...ls5)){det.push('💀 삼각수렴 하단 이탈 → 매도 신호!');sc-=2;}
+      }
+    }
+  }
+  // 언덕 돌파 (매수타점 #1) - 최근 25~3일 사이 고점 돌파
+  if(n>=28){
+    const prevH=Math.max(...candles.slice(-28,-3).map(c=>c.high));
+    if(cl[n-2]<=prevH&&cl[n-1]>prevH){
+      det.push(`🔥 언덕(최근 고점 ${fmt(prevH)}) 돌파! → 매수 신호`);sc+=2;
+    }else if(cl[n-1]>prevH*0.97&&cl[n-1]<=prevH){
+      det.push(`📌 언덕 근처 (고점 ${fmt(prevH)}) → 돌파 대기`);
+    }
+  }
+  // 또로록 패턴 (매수타점 #3) - 소형봉 연속 조정 후 반전 양봉
+  if(n>=9){
+    const r7=candles.slice(-8,-1);
+    const small=r7.filter(c=>{const body=Math.abs(c.close-c.open),rng=c.high-c.low;return rng>0&&body/rng<0.4;});
+    const isDown=r7[r7.length-1].close<r7[0].close;
+    const last=candles[n-1];
+    const lBody=Math.abs(last.close-last.open);
+    const avgBody=r7.reduce((s,c)=>s+Math.abs(c.close-c.open),0)/r7.length;
+    if(small.length>=5&&isDown&&last.close>last.open&&lBody>avgBody*1.5){
+      det.push('✅ 또로록 패턴 → 소형봉 조정 후 반전 양봉 (매수 신호)');sc+=2;
+    }
+  }
+
+  // 더듬이 쌍봉언덕 (매수타점 #13)
+  // 2번째 고점이 1번째보다 살짝 높지만(더듬이) 종가는 1번째 아래 → 매수 구간
+  if(n>=50){
+    const seg=candles.slice(-50),hs=seg.map(c=>c.high),mxs=[];
+    for(let i=3;i<hs.length-3;i++)
+      if(hs[i]>hs[i-1]&&hs[i]>hs[i-2]&&hs[i]>hs[i+1]&&hs[i]>hs[i+2])
+        mxs.push({i,v:hs[i],cls:seg[i].close});
+    if(mxs.length>=2){
+      const[da,db]=mxs.slice(-2);
+      const ddiff=(db.v-da.v)/da.v*100;
+      if(ddiff>0.3&&ddiff<4&&db.cls<da.v){
+        const between=seg.slice(da.i,db.i);
+        const midLow=Math.min(...between.map(c=>c.low));
+        const cur=cl[n-1];
+        if(cur<da.v&&cur>midLow){
+          det.push('📌 더듬이 쌍봉언덕 형성 → 중간 저점 부근 매수타점');sc+=2;
+        }else if(cur>da.v){
+          det.push('🔥 더듬이 쌍봉언덕 상단 돌파 → 강한 매수 신호!');sc+=3;
+        }
+      }
+    }
+  }
+  // 하락의 3묶음 끝 감지 (상승종목 #1)
+  // 3번의 연속 하락 저점(각각 더 낮아짐) 이후 반등 → 대상승 초입
+  if(n>=60){
+    const seg=candles.slice(-60),ls=seg.map(c=>c.low),mp=[];
+    for(let i=5;i<ls.length-5;i++)
+      if(ls[i]<Math.min(...ls.slice(i-5,i))&&ls[i]<Math.min(...ls.slice(i+1,i+6)))
+        mp.push({i,v:ls[i]});
+    if(mp.length>=3){
+      const[p1,p2,p3]=mp.slice(-3);
+      if(p2.v<p1.v&&p3.v<p2.v){
+        const cur=cl[n-1];
+        if(cur>p3.v*1.03&&cur<p1.v){
+          det.push('✅ 하락의 3묶음 완성 후 반등 → 대상승 초입 가능성!');sc+=2;
+        }else if(cur<=p3.v*1.03){
+          det.push('⚠️ 하락의 3묶음 진행 중 → 아직 바닥 미확인');sc--;
+        }
+      }
+    }
+  }
+  // 복합조정파동 통돌파 (매수타점 #5)
+  // 조정 구간(지그재그 반복)의 고점 전체를 종가로 돌파 → 강한 매수
+  if(n>=40){
+    const corr=candles.slice(-35,-3);
+    const cHigh=Math.max(...corr.map(c=>c.high));
+    const cLow=Math.min(...corr.map(c=>c.low));
+    const cRange=(cHigh-cLow)/cLow*100;
+    if(cRange>=5&&cRange<=25){
+      const mid=(cHigh+cLow)/2;
+      let cross=0;
+      for(let i=1;i<corr.length;i++)
+        if((corr[i-1].close<mid&&corr[i].close>mid)||(corr[i-1].close>mid&&corr[i].close<mid))cross++;
+      if(cross>=3){
+        if(cl[n-2]<=cHigh&&cl[n-1]>cHigh){
+          det.push(`🔥 복합조정파동 통돌파! (조정 고점 ${fmt(cHigh)}) → 강한 매수 신호`);sc+=3;
+        }else if(cl[n-1]>cHigh*0.97&&cl[n-1]<=cHigh){
+          det.push(`📌 복합조정 상단(${fmt(cHigh)}) 돌파 직전 (지그재그 ${cross}회)`);sc++;
+        }
+      }
+    }
+  }
+  // 월봉뚜껑 (매수타점 #8) - 전월 슈팅스타 후 이번달 반등 = 매수타점
+  const months=aggregateMonthly(candles);
+  const mn=months.length;
+  if(mn>=2){
+    const pm=months[mn-2],cm=months[mn-1];
+    const pmBody=Math.abs(pm.close-pm.open),pmRange=pm.high-pm.low;
+    const pmUp=pm.high-Math.max(pm.open,pm.close);
+    if(pmRange>0&&pmUp>pmBody*2&&pmBody/pmRange<0.35){
+      det.push('⚠️ 전월 월봉 뚜껑(슈팅스타) → 조정 주의');sc-=1;
+      if(cm.close>pm.close*1.02){
+        det.push('✅ 월봉뚜껑 이후 이번달 반등 확인 → 매수타점!');sc+=3;
+      }
+    }
+  }
+
   if(!det.length)det.push('특별한 패턴 없음 (추세 관찰 중)');
   const sg=sc>0?'bull':sc<0?'bear':'neutral';
   return{id:'pat',title:'차트 패턴',signal:sg,score:Math.max(-3,Math.min(3,sc)),
@@ -669,10 +850,116 @@ function analyzeVolume(candles){
     summary:`오늘 거래량 평균의 ${(ratio*100).toFixed(0)}%`,details:det};
 }
 
+// ── 주봉 집계 ──────────────────────────────────────────────
+function aggregateWeekly(candles){
+  const weeks=[];
+  let cur=null,curKey='';
+  for(const c of candles){
+    const d=new Date(c.date);
+    const dow=d.getDay();
+    const diff=dow===0?-6:1-dow;
+    const mon=new Date(d);mon.setDate(d.getDate()+diff);
+    const key=`${mon.getFullYear()}-${mon.getMonth()}-${mon.getDate()}`;
+    if(key!==curKey){
+      if(cur)weeks.push(cur);
+      cur={date:new Date(c.date),open:c.open,high:c.high,low:c.low,close:c.close,volume:c.volume};
+      curKey=key;
+    }else{
+      cur.high=Math.max(cur.high,c.high);
+      cur.low=Math.min(cur.low,c.low);
+      cur.close=c.close;
+      cur.volume+=c.volume;
+    }
+  }
+  if(cur)weeks.push(cur);
+  return weeks;
+}
+
+// ── 월봉 집계 ──────────────────────────────────────────────
+function aggregateMonthly(candles){
+  const months=[];
+  let cur=null,curKey='';
+  for(const c of candles){
+    const d=new Date(c.date);
+    const key=`${d.getFullYear()}-${d.getMonth()}`;
+    if(key!==curKey){
+      if(cur)months.push(cur);
+      cur={date:new Date(c.date),open:c.open,high:c.high,low:c.low,close:c.close,volume:c.volume};
+      curKey=key;
+    }else{
+      cur.high=Math.max(cur.high,c.high);
+      cur.low=Math.min(cur.low,c.low);
+      cur.close=c.close;
+      cur.volume+=c.volume;
+    }
+  }
+  if(cur)months.push(cur);
+  return months;
+}
+
+// ── 주봉 반전 분석 ──────────────────────────────────────────
+function analyzeWeeklyReversal(candles){
+  const weeks=aggregateWeekly(candles);
+  const n=weeks.length;
+  const det=[];
+  let sc=0;
+
+  if(n<4){det.push('데이터 부족 (주봉 4주 이상 필요)');
+    return{id:'weekly',title:'주봉 반전 분석',signal:'neutral',score:0,summary:'데이터 부족',details:det};}
+
+  const pw=weeks[n-2]; // 전주
+  const cw=weeks[n-1]; // 이번주
+  const pvBear=pw.close<pw.open;
+  const cvBull=cw.close>=cw.open;
+  const pvBody=Math.abs(pw.open-pw.close);
+  const cvBody=Math.abs(cw.close-cw.open);
+
+  // 최근 3주 하락 추세 체크
+  const w3=weeks[n-3],w4=weeks[n-4];
+  const recentDown=pw.close<w3.close&&w3.close<(w4?w4.close:w3.close+1);
+
+  if(pvBear&&cvBull&&pvBody>0){
+    const covered=(cw.close-pw.close)/pvBody; // 전주 음봉 몸통 대비 덮은 비율
+    if(covered>=1.0){
+      det.push(`✅ 주봉 완전 장악형: 전주 음봉 ${(covered*100).toFixed(0)}% 덮음 → 강한 반전 신호!`);sc+=3;
+    }else if(covered>=0.5){
+      det.push(`✅ 주봉 관통형: 전주 음봉의 ${(covered*100).toFixed(0)}% 덮음 → 반전 가능`);sc+=2;
+      if(recentDown)det.push('  → 하락 추세 중 발생 → 더욱 의미 있음');
+    }else if(covered>0){
+      det.push(`⚠️ 전주 음봉의 ${(covered*100).toFixed(0)}%만 덮음 (50% 미만 → 반전 신호 약함)`);
+    }
+  }else if(!pvBear&&cvBull){
+    det.push('ℹ️ 전주가 양봉 → 반전 패턴 대상 아님');
+  }else if(pvBear&&!cvBull){
+    // 전주도 음봉이고 이번주도 음봉
+    const contBody=cvBody/pvBody;
+    if(contBody>0.5){det.push(`❌ 하락 연속: 이번주 음봉이 전주의 ${(contBody*100).toFixed(0)}% → 추가 하락 주의`);sc-=2;}
+    else det.push('⚠️ 하락 지속 중 (이번주 음봉 소폭)');
+    sc--;
+  }
+
+  // 전주 대비 이번주 거래량
+  if(cw.volume>pw.volume*1.3&&cvBull){
+    det.push('📈 거래량 급증 + 양봉 → 반전 신뢰도 상승');sc++;
+  }
+
+  // 주봉 추세 요약
+  const trend3=weeks.slice(-4,-1).map(w=>w.close);
+  const isDown3=trend3[2]<trend3[1]&&trend3[1]<trend3[0];
+  if(isDown3&&cvBull&&sc>0)det.push('💡 3주 하락 후 반전 양봉 → 바닥 전환 가능성 주목');
+
+  if(!det.length)det.push('특별한 주봉 반전 신호 없음');
+  const sig=sc>0?'bull':sc<0?'bear':'neutral';
+  const pvStr=pvBody>0?`전주 음봉 ${(Math.abs((cw.close-pw.close)/pvBody)*100).toFixed(0)}% 덮음`:'전주 양봉';
+  return{id:'weekly',title:'주봉 반전 분석',signal:sig,score:Math.max(-3,Math.min(3,sc)),
+    summary:pvStr,details:det};
+}
+
 function runAll(candles){
   return[analyzeMA(candles),analyzeMACD(candles),analyzeRSI(candles),
     analyzeBollinger(candles),analyzeIchimoku(candles),
-    analyzeCandle(candles),analyzePattern(candles),analyzeVolume(candles)];
+    analyzeCandle(candles),analyzePattern(candles),analyzeVolume(candles),
+    analyzeWeeklyReversal(candles)];
 }
 
 // ── 데이터 로드 ────────────────────────────────────────────
@@ -901,52 +1188,156 @@ function renderGrid(analyses){
 }
 
 // ── 검색 자동완성 ──────────────────────────────────────────
-let sugTimer;
-function renderSugs(list){
+
+// 초성 추출 (가~힣 범위)
+const CHO=['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+function extractCho(str){
+  return [...str].map(c=>{
+    const cp=c.charCodeAt(0);
+    if(cp>=0xAC00&&cp<=0xD7A3) return CHO[Math.floor((cp-0xAC00)/588)];
+    return c;
+  }).join('');
+}
+
+// 검색어 하이라이트 (HTML escape + mark 태그)
+function highlight(text, q){
+  if(!q) return text;
+  const esc=text.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const eq=q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  return esc.replace(new RegExp(eq,'gi'),m=>`<mark>${m}</mark>`);
+}
+
+// 종목 검색 점수 (낮을수록 우선)
+function scoreStock(s, q, ql, cho){
+  const nl=s.n.toLowerCase();
+  const ncho=extractCho(s.n);
+  const cl=s.c.toLowerCase();
+  if(nl===ql) return 0;             // 완전 일치
+  if(nl.startsWith(ql)) return 1;   // 이름 앞 일치
+  if(cl===ql||s.c===q) return 2;    // 코드 완전 일치
+  if(cl.startsWith(ql)) return 3;   // 코드 앞 일치
+  if(ncho.startsWith(cho)) return 4; // 초성 앞 일치
+  if(nl.includes(ql)) return 5;     // 이름 포함
+  if(ncho.includes(cho)) return 6;  // 초성 포함
+  return 99;
+}
+
+let sugTimer, sugActive=-1, sugList=[], composing=false;
+
+function renderSugs(list, q){
+  sugList=list;
+  sugActive=-1;
   const el=$('suggestions');
-  if(!list.length){el.hidden=true;return;}
-  el.innerHTML=list.slice(0,8).map(s=>`
-    <div class="sug-item" data-t="${s.sym||s.c+'.'+s.m}">
-      <div><span class="sug-name">${s.n}</span><span class="sug-code"> · ${s.c}</span></div>
+  if(!list.length){
+    el.innerHTML='<div class="sug-no-result">검색 결과 없음</div>';
+    el.hidden=false;return;
+  }
+  const ql=q.toLowerCase();
+  el.innerHTML=list.slice(0,10).map((s,i)=>`
+    <div class="sug-item" data-i="${i}" data-t="${s.sym||s.c+'.'+s.m}">
+      <div><span class="sug-name">${highlight(s.n,q)}</span><span class="sug-code"> · ${s.c}</span></div>
       <span class="sug-mkt">${s.m==='KS'?'KOSPI':'KOSDAQ'}</span>
     </div>`).join('');
   el.hidden=false;
-  el.querySelectorAll('.sug-item').forEach(it=>it.addEventListener('click',()=>{
-    $('searchInput').value=it.querySelector('.sug-name').textContent;
-    el.hidden=true;runAnalysis(it.dataset.t);
+  el.querySelectorAll('.sug-item').forEach(it=>it.addEventListener('mousedown',e=>{
+    e.preventDefault(); // blur 방지
+    const sym=it.dataset.t;
+    const name=it.querySelector('.sug-name').textContent;
+    $('searchInput').value=name;
+    el.hidden=true;
+    runAnalysis(sym);
   }));
 }
-$('searchInput').addEventListener('input',function(){
+
+function moveSug(dir){
+  const items=$('suggestions').querySelectorAll('.sug-item');
+  if(!items.length) return;
+  items[sugActive]?.classList.remove('active');
+  sugActive=Math.max(-1,Math.min(items.length-1,sugActive+dir));
+  if(sugActive>=0) items[sugActive].classList.add('active');
+}
+
+async function doSearch(q){
+  if(!q){$('suggestions').hidden=true;return;}
+  const ql=q.toLowerCase();
+  const cho=extractCho(q);
+  const isAllCho=/^[ㄱ-ㅎ]+$/.test(q); // 순수 초성만 입력된 경우
+
+  let ms=STOCKS.filter(s=>{
+    const nl=s.n.toLowerCase();
+    const ncho=extractCho(s.n);
+    if(isAllCho) return ncho.startsWith(cho)||ncho.includes(cho);
+    return nl.includes(ql)||s.c.toLowerCase().startsWith(ql)||ncho.startsWith(cho)||ncho.includes(cho);
+  });
+
+  // 점수순 정렬
+  ms.sort((a,b)=>{
+    const sa=scoreStock(a,q,ql,cho), sb=scoreStock(b,q,ql,cho);
+    if(sa!==sb) return sa-sb;
+    return a.n.localeCompare(b.n,'ko');
+  });
+
+  renderSugs(ms.slice(0,10), q);
+
+  // 로컬 결과가 적으면 Yahoo Finance 보완
+  if(ms.length<5&&!isAllCho){
+    try{
+      const r=await fetch(`/search/${encodeURIComponent(q)}`);
+      const d=await r.json();
+      const yfQ=(d?.quotes||[]).filter(x=>
+        (x.symbol?.endsWith('.KS')||x.symbol?.endsWith('.KQ'))&&(x.longname||x.shortname)
+      );
+      const localSet=new Set(ms.map(s=>(s.sym||s.c+'.'+s.m)));
+      let added=false;
+      yfQ.forEach(x=>{
+        if(!localSet.has(x.symbol)){
+          ms.push({c:x.symbol.replace(/\.(KS|KQ)$/,''),n:x.longname||x.shortname,
+            m:x.symbol.endsWith('.KQ')?'KQ':'KS',sym:x.symbol});
+          added=true;
+        }
+      });
+      if(added) renderSugs(ms.slice(0,10), q);
+    }catch(e){}
+  }
+}
+
+const inp=$('searchInput');
+inp.addEventListener('compositionstart',()=>{composing=true;});
+inp.addEventListener('compositionend',function(){
+  composing=false;
+  clearTimeout(sugTimer);
+  sugTimer=setTimeout(()=>doSearch(this.value.trim()),50);
+});
+inp.addEventListener('input',function(){
+  if(composing) return; // IME 조합 중엔 대기
   clearTimeout(sugTimer);
   const q=this.value.trim();
-  if(!q){$('suggestions').hidden=true;return;}
-  sugTimer=setTimeout(async ()=>{
-    const ql=q.toLowerCase();
-    let ms=STOCKS.filter(s=>s.n.toLowerCase().includes(ql)||s.c.startsWith(q));
-    renderSugs(ms); // 로컬 결과 즉시 표시
-    // 로컬 결과가 적으면 Yahoo Finance 검색도 병행
-    if(ms.length<4){
-      try{
-        const r=await fetch(`/search/${encodeURIComponent(q)}`);
-        const d=await r.json();
-        const yfQ=(d?.quotes||[]).filter(x=>
-          (x.symbol?.endsWith('.KS')||x.symbol?.endsWith('.KQ'))&&(x.longname||x.shortname)
-        );
-        const localSet=new Set(ms.map(s=>(s.sym||s.c+'.'+s.m)));
-        yfQ.forEach(x=>{
-          if(!localSet.has(x.symbol)){
-            ms.push({c:x.symbol.replace(/\.(KS|KQ)$/,''),n:x.longname||x.shortname,
-              m:x.symbol.endsWith('.KQ')?'KQ':'KS',sym:x.symbol});
-          }
-        });
-        if(yfQ.length) renderSugs(ms); // YF 결과 추가되면 업데이트
-      }catch(e){}
-    }
-  },150);
+  sugTimer=setTimeout(()=>doSearch(q),120);
 });
-document.addEventListener('click',e=>{if(!e.target.closest('.search-wrap'))$('suggestions').hidden=true;});
-$('analyzeBtn').addEventListener('click',()=>{const q=$('searchInput').value.trim();if(q)runAnalysis(q);});
-$('searchInput').addEventListener('keydown',e=>{if(e.key==='Enter'){$('suggestions').hidden=true;const q=$('searchInput').value.trim();if(q)runAnalysis(q);}});
+inp.addEventListener('keydown',function(e){
+  const el=$('suggestions');
+  if(!el.hidden&&(e.key==='ArrowDown'||e.key==='ArrowUp')){
+    e.preventDefault();
+    moveSug(e.key==='ArrowDown'?1:-1);
+    return;
+  }
+  if(e.key==='Enter'){
+    if(!el.hidden&&sugActive>=0){
+      e.preventDefault();
+      const it=el.querySelectorAll('.sug-item')[sugActive];
+      if(it){
+        this.value=it.querySelector('.sug-name').textContent;
+        el.hidden=true;runAnalysis(it.dataset.t);return;
+      }
+    }
+    el.hidden=true;
+    const q=this.value.trim();if(q)runAnalysis(q);
+  }
+  if(e.key==='Escape'){el.hidden=true;sugActive=-1;}
+});
+inp.addEventListener('blur',()=>{setTimeout(()=>{$('suggestions').hidden=true;sugActive=-1;},150);});
+document.addEventListener('click',e=>{if(!e.target.closest('.search-wrap')){$('suggestions').hidden=true;sugActive=-1;}});
+$('analyzeBtn').addEventListener('click',()=>{const q=inp.value.trim();if(q)runAnalysis(q);});
 
 // 빠른 선택 버튼
 const qrow=document.querySelector('.quick-row');
@@ -971,16 +1362,6 @@ function scoreToSignal(norm){
 function chipHtml(sig){
   const label=sig==='bull'?'매수':sig==='bear'?'매도':'중립';
   return`<span class="chip-sm chip ${sig}">${label}</span>`;
-}
-
-function fmt(n){
-  if(n==null)return'—';
-  return n.toLocaleString('ko-KR');
-}
-function fmtPct(n){
-  if(n==null)return'—';
-  const s=n>=0?'+':'';
-  return`${s}${n.toFixed(2)}%`;
 }
 
 async function runScan(){
@@ -1023,14 +1404,15 @@ async function runScan(){
         const candles=parseCandles(res);
         if(candles.length<20)return;
         const analyses=runAll(candles);
-        let bullC=0,bearC=0,neuC=0,tot=0,maxS=0;
+        let bullC=0,bearC=0,neuC=0,tot=0;
         analyses.forEach(a=>{
-          tot+=a.score;maxS+=a.maxScore;
+          tot+=a.score;
           if(a.signal==='bull')bullC++;
           else if(a.signal==='bear')bearC++;
           else neuC++;
         });
-        const norm=maxS>0?(tot+maxS)/(maxS*2):0.5;
+        const maxS=analyses.length*3;
+        const norm=(tot+maxS)/(maxS*2);
         const last=candles[candles.length-1];
         const prev=candles[candles.length-2];
         const chg=prev?((last.close-prev.close)/prev.close*100):null;
