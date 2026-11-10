@@ -231,11 +231,12 @@ body{
 
 /* 전체 스캔 */
 .scan-btn{
-  margin-top:10px;padding:9px 20px;background:var(--surface2);
+  padding:9px 20px;background:var(--surface2);
   color:var(--fg);border:1px solid var(--border);border-radius:8px;
   font-size:13px;font-weight:600;cursor:pointer;transition:background .15s
 }
 .scan-btn:hover{background:var(--border)}
+.scan-btn.active-mkt{border-color:var(--accent);color:var(--accent)}
 #scanSection{padding:0 0 24px}
 .scan-hd{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
 .scan-hd h2{font-size:16px;font-weight:700;margin:0}
@@ -278,12 +279,15 @@ body{
     <div class="quick-row">
       <span class="qlabel">바로가기:</span>
     </div>
-    <button class="scan-btn" id="scanBtn">전체 스캔 (KOSPI+KOSDAQ 순위)</button>
+    <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;align-items:center">
+      <button class="scan-btn active-mkt" id="scanBtn" data-mkt="kr">🇰🇷 한국 스캔</button>
+      <button class="scan-btn" id="scanBtnUs" data-mkt="us">🇺🇸 미국 스캔</button>
+    </div>
   </header>
 
   <section id="scanSection" hidden>
     <div class="scan-hd">
-      <h2>종목 종합 순위</h2>
+      <h2 id="scanTitle">종목 종합 순위</h2>
       <div class="scan-progress" id="scanProgress" hidden>
         <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
         <div class="prog-txt" id="progTxt">준비 중...</div>
@@ -2010,16 +2014,26 @@ function chipHtml(sig){
   return`<span class="chip-sm chip ${sig}">${label}</span>`;
 }
 
-async function runScan(pushHistory=true){
+let scanMarket='kr'; // 'kr' | 'us'
+
+async function runScan(mkt, pushHistory=true){
   if(scanRunning)return;
+  scanMarket=mkt||scanMarket;
   if(pushHistory===true) history.pushState({page:'scan'}, '', '?scan=1');
   scanRunning=true;
   scanResults=[];
-  const btn=$('scanBtn');
+  // 버튼 상태 업데이트
+  document.querySelectorAll('.scan-btn').forEach(b=>{
+    b.classList.toggle('active-mkt', b.dataset.mkt===scanMarket);
+  });
+  const btn=scanMarket==='us'?$('scanBtnUs'):$('scanBtn');
+  const otherBtn=scanMarket==='us'?$('scanBtn'):$('scanBtnUs');
   btn.textContent='스캔 중...';btn.disabled=true;
+  otherBtn.disabled=true;
   $('scanSection').hidden=false;
   $('scanProgress').hidden=false;
   $('filterRow').hidden=true;
+  $('scanTitle').textContent=scanMarket==='us'?'🇺🇸 미국 종목 순위':'🇰🇷 한국 종목 순위 (KOSPI+KOSDAQ)';
   $('scanBody').innerHTML=`<tr><td colspan="10" class="scan-empty">종목 목록 불러오는 중...</td></tr>`;
 
   // scan-universe.json에서 종목 목록 로드
@@ -2027,11 +2041,17 @@ async function runScan(pushHistory=true){
   try{
     const r=await fetch('/stocks');
     const d=await r.json();
-    universe=(d.kr||[]).map(s=>({
-      c:s.symbol.replace(/\.(KS|KQ)$/,''),
-      n:s.name,
-      m:s.symbol.endsWith('.KQ')?'KQ':'KS',
-    }));
+    if(scanMarket==='us'){
+      universe=(d.us||[]).map(s=>({
+        c:s.symbol, n:s.name, m:'US', sym:s.symbol,
+      }));
+    }else{
+      universe=(d.kr||[]).map(s=>({
+        c:s.symbol.replace(/\.(KS|KQ)$/,''),
+        n:s.name,
+        m:s.symbol.endsWith('.KQ')?'KQ':'KS',
+      }));
+    }
   }catch(e){}
   // 로드 실패 시 하드코딩 목록으로 폴백
   if(!universe.length) universe=STOCKS;
@@ -2045,7 +2065,7 @@ async function runScan(pushHistory=true){
   for(let i=0;i<total;i+=BATCH){
     const batch=universe.slice(i,i+BATCH);
     await Promise.all(batch.map(async s=>{
-      const sym=`${s.c}.${s.m}`;
+      const sym=s.sym||`${s.c}.${s.m}`;
       try{
         const res=await fetchYF(sym,'1y');
         const candles=parseCandles(res);
@@ -2088,7 +2108,9 @@ async function runScan(pushHistory=true){
   renderScanTable();
   $('progTxt').textContent=`완료: ${total}개 종목 분석`;
   $('filterRow').hidden=false;
-  btn.textContent='다시 스캔';btn.disabled=false;
+  const btnLabel=scanMarket==='us'?'🇺🇸 미국 스캔':'🇰🇷 한국 스캔';
+  btn.textContent=btnLabel;btn.disabled=false;
+  otherBtn.disabled=false;
   scanRunning=false;
 }
 
@@ -2110,7 +2132,7 @@ function renderScanTable(){
     <tr data-sym="${r.sym}">
       <td class="rank">${i+1}</td>
       <td class="sname">${r.name}</td>
-      <td class="smkt">${r.market==='KS'?'KOSPI':'KOSDAQ'}</td>
+      <td class="smkt">${r.market==='KS'?'KOSPI':r.market==='KQ'?'KOSDAQ':'미국'}</td>
       <td>${fmt(r.price)}</td>
       <td style="color:${r.chg>=0?'var(--bull)':'var(--bear)'}">${fmtPct(r.chg)}</td>
       <td class="score-cell" style="color:${r.signal==='bull'?'var(--bull)':r.signal==='bear'?'var(--bear)':'var(--warn)'}">
@@ -2130,7 +2152,8 @@ function renderScanTable(){
   });
 }
 
-$('scanBtn').addEventListener('click',()=>runScan());
+$('scanBtn').addEventListener('click',()=>runScan('kr'));
+$('scanBtnUs').addEventListener('click',()=>runScan('us'));
 document.querySelectorAll('#filterRow .fbtn').forEach(btn=>{
   btn.addEventListener('click',function(){
     document.querySelectorAll('#filterRow .fbtn').forEach(b=>b.classList.remove('active'));
@@ -2162,7 +2185,7 @@ window.addEventListener('popstate',e=>{
   }
   if(s.page==='scan'){
     if(scanResults.length) restoreScanView();
-    else runScan(false);
+    else runScan(scanMarket, false);
     return;
   }
   if(s.page==='analysis'){
