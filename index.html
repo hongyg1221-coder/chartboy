@@ -193,6 +193,14 @@ body{
 .candle-state-outlook.bull .candle-outlook-label{color:var(--bull)}
 .candle-state-outlook.bear .candle-outlook-label{color:var(--bear)}
 .candle-state-outlook p{margin:0;color:var(--fg)}
+.investor-section{margin-top:10px;padding:10px 14px;background:var(--surface2);border-radius:8px}
+.investor-title{font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--dim);margin-bottom:8px;text-transform:uppercase}
+.investor-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:13px}
+.investor-name{color:var(--dim)}
+.investor-val.buy{color:var(--bull);font-weight:700}
+.investor-val.sell{color:var(--bear);font-weight:700}
+.investor-val.flat{color:var(--dim)}
+.investor-interp{margin-top:8px;font-size:12px;line-height:1.65;color:var(--fg);padding-top:8px;border-top:1px solid rgba(128,128,128,.2)}
 
 /* Chart */
 .chart-sec{
@@ -854,12 +862,68 @@ function analyzeCandleState(candles){
     narrative:parts.join(' '),outlook:oparts.join(' '),outlookClass,outlookLabel};
 }
 
-function renderCandleState(candles){
+function renderCandleState(candles, investor){
   const st=analyzeCandleState(candles);
   const el=$('candleStateCard');
   if(!st){el.innerHTML='';return;}
   const chSign=st.change>=0?'+':'';
   const chClass=st.change>=0?'bull':'bear';
+
+  // 투자자 섹션
+  let investorHtml='';
+  if(investor && !investor.error){
+    const fmt=n=>{
+      const abs=Math.abs(n);
+      const s=abs>=10000?`${(abs/10000).toFixed(1)}만`:`${abs.toLocaleString()}`;
+      return (n>0?'+':n<0?'-':'')+s+'주';
+    };
+    const cls=n=>n>0?'buy':n<0?'sell':'flat';
+    const lbl=n=>n>0?'순매수':n<0?'순매도':'보합';
+
+    // 투자자 해석
+    const f=investor.foreign, ins=investor.institution;
+    let interp='';
+    if(f>0&&ins>0){
+      interp=st.isBull
+        ?`외국인과 기관이 모두 순매수하며 상승을 이끌었습니다. 세력 주도 매수로 신뢰도 높은 상승 신호입니다.`
+        :`주가는 하락했지만 외국인·기관이 모두 순매수했습니다. 저가 매집 가능성이 있으며, 추가 하락보다 반등에 무게를 둘 수 있습니다.`;
+    }else if(f>0&&ins<=0){
+      interp=st.isBull
+        ?`외국인이 순매수하며 상승을 주도했습니다. 기관은 ${ins<0?'순매도':'중립'}이었습니다.`
+        :`주가는 하락했지만 외국인이 순매수했습니다. 외국인 저가 매집 가능성을 주목하세요.`;
+    }else if(f<=0&&ins>0){
+      interp=st.isBull
+        ?`기관이 순매수하며 상승을 뒷받침했습니다. 외국인은 ${f<0?'순매도':'중립'}이었습니다.`
+        :`주가는 하락했지만 기관이 순매수했습니다. 기관 저가 매집 여부를 주목하세요.`;
+    }else{
+      interp=st.isBull
+        ?`외국인·기관이 모두 순매도했음에도 주가는 상승했습니다. 개인 매수 주도로, 세력 없는 단기 반등일 수 있어 주의가 필요합니다.`
+        :`외국인·기관이 모두 순매도하며 주가를 끌어내렸습니다. 쌍방향 매도로 강한 하락 신호입니다.`;
+    }
+
+    investorHtml=`
+    <div class="investor-section">
+      <div class="investor-title">투자자별 매매동향 (${investor.date})</div>
+      <div class="investor-row">
+        <span class="investor-name">외국인</span>
+        <span class="investor-val ${cls(f)}">${fmt(f)} ${lbl(f)}</span>
+      </div>
+      <div class="investor-row">
+        <span class="investor-name">기관합계</span>
+        <span class="investor-val ${cls(ins)}">${fmt(ins)} ${lbl(ins)}</span>
+      </div>
+      ${investor.pension!==undefined?`<div class="investor-row">
+        <span class="investor-name">연기금</span>
+        <span class="investor-val ${cls(investor.pension)}">${fmt(investor.pension)} ${lbl(investor.pension)}</span>
+      </div>`:''}
+      <div class="investor-row">
+        <span class="investor-name">개인</span>
+        <span class="investor-val ${cls(investor.individual)}">${fmt(investor.individual)} ${lbl(investor.individual)}</span>
+      </div>
+      <div class="investor-interp">${interp}</div>
+    </div>`;
+  }
+
   el.innerHTML=`
   <div class="candle-state-card">
     <div class="candle-state-header">
@@ -893,6 +957,7 @@ function renderCandleState(candles){
       <span class="candle-outlook-label">${st.outlookLabel}</span>
       <p>${st.outlook}</p>
     </div>
+    ${investorHtml}
   </div>`;
 }
 
@@ -2033,7 +2098,17 @@ async function runAnalysis(query, pushHistory=true){
     const analyses=runAll(candles);
     renderHeader(res.meta,candles);
     renderOverall(analyses);
-    renderCandleState(candles);
+    // 외국인·기관 데이터 (KS/KQ 종목만)
+    let investorData=null;
+    const codeM=ticker.match(/^(\d{6})\.(KS|KQ)$/);
+    if(codeM){
+      try{
+        const ir=await fetch(`/investor/${codeM[1]}`);
+        const id=await ir.json();
+        if(id&&!id.error)investorData=id;
+      }catch(e){}
+    }
+    renderCandleState(candles,investorData);
     renderGrid(analyses);
     $('results').hidden=false;
     renderPrice(candles);

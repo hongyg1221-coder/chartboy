@@ -40,6 +40,62 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(f'{{"error":"{e}"}}'.encode())
 
+        # /investor/005930 → 네이버 금융 투자자별 매매동향
+        elif self.path.startswith('/investor/'):
+            import re as _re, json as _json
+            code = self.path[10:].split('?')[0].strip()
+            if not _re.match(r'^\d{6}$', code):
+                self.send_response(400)
+                self.send_header('Content-Type','application/json')
+                self.send_header('Access-Control-Allow-Origin','*')
+                self.end_headers()
+                self.wfile.write(b'{"error":"invalid code"}')
+                return
+            url = f'https://finance.naver.com/item/sise_investor.naver?code={code}'
+            try:
+                req = urllib.request.Request(url, headers={
+                    'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept':'text/html,application/xhtml+xml',
+                    'Accept-Language':'ko-KR,ko;q=0.9',
+                    'Referer':'https://finance.naver.com/',
+                })
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    html = resp.read().decode('euc-kr', errors='replace')
+                # 첫 번째 날짜 행 파싱
+                rows = _re.findall(
+                    r'<td[^>]*class="[^"]*date[^"]*"[^>]*>\s*(\d{4}\.\d{2}\.\d{2})\s*</td>(.*?)</tr>',
+                    html, _re.DOTALL
+                )
+                result = {'error': 'no data'}
+                if rows:
+                    date_str, cells = rows[0]
+                    nums = _re.findall(r'[>]\s*([+\-]?[\d,]+)\s*[<]', cells)
+                    vals = []
+                    for n in nums:
+                        n = n.strip()
+                        if _re.match(r'^[+\-]?\d[\d,]*$', n):
+                            try: vals.append(int(n.replace(',','')))
+                            except: pass
+                    if len(vals) >= 3:
+                        result = {
+                            'date': date_str,
+                            'individual': vals[0],
+                            'foreign': vals[1],
+                            'institution': vals[2],
+                            'pension': vals[9] if len(vals) > 9 else 0,
+                        }
+                self.send_response(200)
+                self.send_header('Content-Type','application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin','*')
+                self.end_headers()
+                self.wfile.write(_json.dumps(result, ensure_ascii=False).encode())
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type','application/json')
+                self.send_header('Access-Control-Allow-Origin','*')
+                self.end_headers()
+                self.wfile.write(f'{{"error":"{e}"}}'.encode())
+
         # /stocks → scan-universe.json 반환
         elif self.path == '/stocks':
             try:
