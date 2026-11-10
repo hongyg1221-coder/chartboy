@@ -2047,7 +2047,7 @@ async function runScan(pushHistory=true){
     await Promise.all(batch.map(async s=>{
       const sym=`${s.c}.${s.m}`;
       try{
-        const res=await fetchYF(sym,'3mo');
+        const res=await fetchYF(sym,'1y');
         const candles=parseCandles(res);
         if(candles.length<20)return;
         const analyses=runAll(candles);
