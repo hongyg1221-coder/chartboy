@@ -179,6 +179,20 @@ body{
   border-radius:8px;border-left:3px solid var(--accent)
 }
 .candle-state-narrative strong{color:var(--fg)}
+.candle-state-outlook{
+  margin-top:10px;padding:12px 14px;border-radius:8px;
+  font-size:13px;line-height:1.75;
+}
+.candle-state-outlook.bull{background:rgba(0,200,120,.1);border-left:3px solid var(--bull)}
+.candle-state-outlook.bear{background:rgba(255,80,80,.1);border-left:3px solid var(--bear)}
+.candle-state-outlook.neutral{background:rgba(180,180,180,.1);border-left:3px solid var(--dim)}
+.candle-outlook-label{
+  display:block;font-size:11px;font-weight:700;letter-spacing:.04em;
+  margin-bottom:5px;opacity:.8;
+}
+.candle-state-outlook.bull .candle-outlook-label{color:var(--bull)}
+.candle-state-outlook.bear .candle-outlook-label{color:var(--bear)}
+.candle-state-outlook p{margin:0;color:var(--fg)}
 
 /* Chart */
 .chart-sec{
@@ -745,7 +759,70 @@ function analyzeCandleState(candles){
     parts.push('전일 음봉을 오늘 양봉이 완전히 덮는 상승 장악형입니다. 반전 신호로 볼 수 있습니다.');
   }
 
-  return{typeKo,typeClass,isBull,change,bodyRatio,upperPct,lowerPct,volRatio,narrative:parts.join(' ')};
+  // 갭 여부
+  const gapPct=(c.open-p.close)/p.close*100;
+  const gapUp=gapPct>0.5;
+  const gapDown=gapPct<-0.5;
+
+  // 단기 전망 해석
+  const oparts=[];
+  let outlookClass='neutral';
+
+  if(!isBull&&bodyRatio>0.7){
+    // 장대음봉
+    if(gapDown){
+      oparts.push(`전일 종가 대비 ${Math.abs(gapPct).toFixed(1)}% 갭 하락으로 시작한 뒤 추가로 밀린 형태입니다. 하락을 미리 선반영한 측면이 있어 과도한 하락 시 단기 반등(갭 메우기)도 가능합니다. 그러나 갭 하락 + 장대음봉 조합은 하락 추세 초입 신호이기도 하므로, 반등 시 저항 여부를 반드시 확인해야 합니다.`);
+      outlookClass='bear';
+    }else if(gapUp){
+      oparts.push(`전일 종가보다 갭 상승 출발했지만 결국 크게 밀렸습니다. '상승 출발 → 대폭 하락'은 고점 매물 출회 신호로 강한 단기 하락 경보입니다. 단기 조정 가능성이 높습니다.`);
+      outlookClass='bear';
+    }else{
+      oparts.push(`전일 종가 수준에서 시작해 하루 종일 매도 압력이 지속된 형태입니다. 단기 하락 가능성이 높습니다. 다음 날 추가 음봉 여부로 추세 확인이 필요합니다.`);
+      outlookClass='bear';
+    }
+  }else if(isBull&&bodyRatio>0.7){
+    // 장대양봉
+    if(gapUp){
+      oparts.push(`전일 종가 대비 갭 상승 출발 후 추가 상승까지 이어진 강한 형태입니다. 단기 상승 모멘텀이 살아있으나, 갭 상승분만큼 조정(갭 메우기) 가능성도 열어두는 것이 좋습니다.`);
+      outlookClass='bull';
+    }else if(gapDown){
+      oparts.push(`갭 하락 출발했음에도 불구하고 장대양봉으로 마감했습니다. 하방 지지 후 강한 회복으로, 단기 반전 신호로 볼 수 있습니다. 긍정적으로 해석됩니다.`);
+      outlookClass='bull';
+    }else{
+      oparts.push(`전일 수준에서 시작해 하루 종일 강하게 상승한 형태입니다. 매수 세력이 우위를 점했으며, 단기 상승 흐름이 이어질 가능성이 있습니다.`);
+      outlookClass='bull';
+    }
+  }else if(typeKo.includes('망치형')||typeKo.includes('역뚜껑형')){
+    oparts.push(`장중 큰 폭으로 하락했다가 회복한 형태입니다. 하방 지지를 테스트하고 매수세가 받쳐준 신호로, 단기 반등 가능성이 있습니다. 다음 날 양봉으로 확인될 경우 반전 신호입니다.`);
+    outlookClass='bull';
+  }else if(typeKo.includes('뚜껑형')||typeKo.includes('슈팅스타')){
+    oparts.push(`장중 큰 폭으로 상승했다가 반락한 형태입니다. 고점에서 매물이 쏟아진 신호로, 단기 하락 가능성이 있습니다. 다음 날 음봉으로 확인될 경우 단기 고점 가능성이 높습니다.`);
+    outlookClass='bear';
+  }else if(typeKo.includes('도지')){
+    oparts.push(`매수·매도 세력이 균형을 이룬 형태입니다. 방향성 불확실 구간으로, 다음 날 봉의 방향과 거래량으로 추세를 판단해야 합니다. 큰 추세 전환 직전에 자주 나타납니다.`);
+    outlookClass='neutral';
+  }else if(isBull){
+    if(gapDown){
+      oparts.push(`갭 하락 출발했지만 결국 양봉으로 마감했습니다. 하락을 선반영한 뒤 반등한 긍정적 신호이나, 전일 종가를 돌파해야 추세 전환으로 볼 수 있습니다.`);
+      outlookClass='neutral';
+    }else{
+      oparts.push(`양봉 마감으로 단기적으로 긍정적이나, 몸통이 크지 않아 강한 추세 신호로 보기는 어렵습니다. 거래량과 함께 판단하는 것이 좋습니다.`);
+      outlookClass='neutral';
+    }
+  }else{
+    if(gapDown){
+      oparts.push(`갭 하락 출발 후 음봉 마감입니다. 이미 하락을 선반영했을 수 있으나, 지지선 근처인지를 확인해야 합니다. 지지선 위라면 단기 반등 가능성도 있습니다.`);
+      outlookClass='bear';
+    }else{
+      oparts.push(`음봉 마감으로 단기 주의가 필요합니다. 하락 추세 중이라면 추가 하락 가능성이 있고, 지지선 근처라면 반등을 노릴 수 있습니다.`);
+      outlookClass='bear';
+    }
+  }
+
+  const outlookLabel=outlookClass==='bull'?'📈 단기 긍정 (상승 가능성)':outlookClass==='bear'?'📉 단기 주의 (하락 가능성)':'⚖️ 방향 불확실';
+
+  return{typeKo,typeClass,isBull,change,bodyRatio,upperPct,lowerPct,volRatio,
+    narrative:parts.join(' '),outlook:oparts.join(' '),outlookClass,outlookLabel};
 }
 
 function renderCandleState(candles){
@@ -783,6 +860,10 @@ function renderCandleState(candles){
       </div>
     </div>
     <div class="candle-state-narrative">${st.narrative}</div>
+    <div class="candle-state-outlook ${st.outlookClass}">
+      <span class="candle-outlook-label">${st.outlookLabel}</span>
+      <p>${st.outlook}</p>
+    </div>
   </div>`;
 }
 
