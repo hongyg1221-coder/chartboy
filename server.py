@@ -61,14 +61,14 @@ class Handler(BaseHTTPRequestHandler):
                 })
                 with urllib.request.urlopen(req, timeout=10) as resp:
                     html = resp.read().decode('euc-kr', errors='replace')
-                # 첫 번째 날짜 행 파싱
+                # 최근 5일치 행 파싱
                 rows = _re.findall(
                     r'<td[^>]*class="[^"]*date[^"]*"[^>]*>\s*(\d{4}\.\d{2}\.\d{2})\s*</td>(.*?)</tr>',
                     html, _re.DOTALL
                 )
                 result = {'error': 'no data'}
-                if rows:
-                    date_str, cells = rows[0]
+                days = []
+                for date_str, cells in rows[:5]:
                     nums = _re.findall(r'[>]\s*([+\-]?[\d,]+)\s*[<]', cells)
                     vals = []
                     for n in nums:
@@ -77,13 +77,15 @@ class Handler(BaseHTTPRequestHandler):
                             try: vals.append(int(n.replace(',','')))
                             except: pass
                     if len(vals) >= 3:
-                        result = {
+                        days.append({
                             'date': date_str,
                             'individual': vals[0],
                             'foreign': vals[1],
                             'institution': vals[2],
                             'pension': vals[9] if len(vals) > 9 else 0,
-                        }
+                        })
+                if days:
+                    result = {'days': days}
                 self.send_response(200)
                 self.send_header('Content-Type','application/json; charset=utf-8')
                 self.send_header('Access-Control-Allow-Origin','*')
