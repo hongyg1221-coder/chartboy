@@ -694,6 +694,12 @@ function analyzeCandleState(candles){
   const avgVol=slice.length?slice.reduce((s,x)=>s+x.volume,0)/slice.length:0;
   const volRatio=avgVol>0?c.volume/avgVol:1;
 
+  // 이동평균선
+  const ma5=candles.slice(Math.max(0,n-5),n).reduce((s,x)=>s+x.close,0)/Math.min(5,n);
+  const ma20=n>=20?candles.slice(n-20,n).reduce((s,x)=>s+x.close,0)/20:null;
+  const ma60=n>=60?candles.slice(n-60,n).reduce((s,x)=>s+x.close,0)/60:null;
+  const aboveMa5=c.close>=ma5,aboveMa20=ma20?c.close>=ma20:null,aboveMa60=ma60?c.close>=ma60:null;
+
   // 봉 종류 판별
   let typeKo,typeClass;
   if(bodyRatio<0.1){typeKo='도지형';typeClass='neutral';}
@@ -828,6 +834,19 @@ function analyzeCandleState(candles){
       }
     }
   }
+
+  // 이동평균선 맥락 — 모든 해석에 자동 추가
+  const maParts=[];
+  if(!aboveMa5){
+    maParts.push(`현재 5일 이동평균선을 하회하고 있습니다. 5일선이 단기 저항으로 작용할 수 있으며, 5일선 회복 여부를 확인 후 대응이 바람직합니다.`);
+    if(aboveMa20===false) maParts.push(`20일선도 하회 중으로 중기 흐름도 약한 상태입니다. 단기 반등이 있더라도 20일선 돌파까지는 추세 전환으로 보기 어렵습니다.`);
+    else if(aboveMa20===true) maParts.push(`다만 20일선은 상회 중이므로 중기 흐름은 아직 유지되고 있습니다.`);
+  }else{
+    maParts.push(`5일 이동평균선 위에서 마감해 단기 흐름은 유지되고 있습니다.`);
+    if(aboveMa20===false) maParts.push(`20일선은 하회 중이므로 중기 추세 회복 여부를 추가로 확인해야 합니다.`);
+    else if(aboveMa20===true) maParts.push(`20일선도 상회 중으로 단기·중기 흐름 모두 긍정적인 상태입니다.`);
+  }
+  if(oparts.length) oparts.push(maParts.join(' '));
 
   const outlookLabel=outlookClass==='bull'?'📈 단기 긍정 (상승 가능성)':outlookClass==='bear'?'📉 단기 주의 (하락 가능성)':'⚖️ 방향 불확실';
 
