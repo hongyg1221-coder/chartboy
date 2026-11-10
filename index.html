@@ -1047,6 +1047,50 @@ function analyzePattern(candles){
     }
   }
 
+  // 월봉 삼봉(헤드앤숄더) / 역삼봉(역헤드앤숄더) / 트리플탑/바텀
+  if(mn>=6){
+    const mseg=months.slice(-Math.min(18,mn));
+    const mhs=mseg.map(m=>m.high),mls=mseg.map(m=>m.low);
+    // 월봉 고점 피크 찾기
+    const peaks=[],troughs=[];
+    for(let i=1;i<mhs.length-1;i++){
+      if(mhs[i]>mhs[i-1]&&mhs[i]>mhs[i+1])peaks.push({i,v:mhs[i]});
+      if(mls[i]<mls[i-1]&&mls[i]<mls[i+1])troughs.push({i,v:mls[i]});
+    }
+    // 삼봉: 고점 3개
+    if(peaks.length>=3){
+      const[L,H,R]=peaks.slice(-3);
+      const lrDiff=Math.abs(L.v-R.v)/Math.max(L.v,R.v)*100;
+      // 헤드앤숄더: 가운데가 가장 높고 양쪽 비슷
+      if(H.v>L.v&&H.v>R.v&&lrDiff<8){
+        det.push(`⛰️ 월봉 삼봉(헤드앤숄더) 형성 — 강한 하락 반전 경고!`);sc-=3;
+        // 넥라인 이탈 체크
+        const neckLine=Math.min(...mls.slice(L.i,R.i+1));
+        if(cl[n-1]<neckLine){det.push('💀 월봉 삼봉 넥라인 이탈 → 강력 매도 신호!');sc-=2;}
+      }
+      // 트리플탑: 세 고점이 비슷한 높이
+      const hDiff=Math.abs(H.v-L.v)/L.v*100;
+      if(lrDiff<5&&hDiff<5){
+        det.push(`⛰️ 월봉 트리플탑 — 강한 저항대, 하락 주의!`);sc-=2;
+      }
+    }
+    // 역삼봉(역헤드앤숄더): 저점 3개, 가운데가 가장 낮음
+    if(troughs.length>=3){
+      const[TL,TH,TR]=troughs.slice(-3);
+      const tlrDiff=Math.abs(TL.v-TR.v)/Math.min(TL.v,TR.v)*100;
+      if(TH.v<TL.v&&TH.v<TR.v&&tlrDiff<8){
+        det.push(`🏔️ 월봉 역삼봉(역헤드앤숄더) — 강한 상승 반전 신호!`);sc+=3;
+        const neckTop=Math.max(...mhs.slice(TL.i,TR.i+1));
+        if(cl[n-1]>neckTop){det.push('🔥 월봉 역삼봉 넥라인 돌파 → 강력 매수 신호!');sc+=2;}
+      }
+      // 트리플바텀
+      const tvDiff=Math.abs(TH.v-TL.v)/TL.v*100;
+      if(tlrDiff<5&&tvDiff<5){
+        det.push(`🏔️ 월봉 트리플바텀 — 강한 지지대, 반등 가능!`);sc+=2;
+      }
+    }
+  }
+
   if(!det.length)det.push('특별한 패턴 없음 (추세 관찰 중)');
   const sg=sc>0?'bull':sc<0?'bear':'neutral';
   return{id:'pat',title:'차트 패턴',signal:sg,score:Math.max(-3,Math.min(3,sc)),
