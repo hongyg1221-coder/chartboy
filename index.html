@@ -114,6 +114,32 @@ body{
 .tally{display:flex;gap:14px;font-size:12px}
 .tdot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle}
 .tdot.bull{background:var(--bull)}.tdot.bear{background:var(--bear)}.tdot.neutral{background:var(--warn)}
+.why-btn{
+  margin-top:12px;background:transparent;border:1px solid var(--border);
+  color:var(--dim);padding:6px 14px;border-radius:6px;font-size:12px;
+  font-family:inherit;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:5px
+}
+.why-btn:hover{border-color:var(--accent);color:var(--accent)}
+.why-panel{
+  margin-top:12px;padding:14px 16px;background:var(--surface2);
+  border-radius:8px;border:1px solid var(--border);font-size:13px;
+  line-height:1.75;display:none
+}
+.why-panel.open{display:block}
+.why-section{margin-bottom:12px}
+.why-section:last-child{margin-bottom:0}
+.why-section-title{font-weight:700;margin-bottom:6px;font-size:13px}
+.why-section-title.bull{color:var(--bull)}
+.why-section-title.bear{color:var(--bear)}
+.why-section-title.neutral{color:var(--warn)}
+.why-section-title.info{color:var(--accent)}
+.why-item{margin-bottom:6px;padding-left:4px}
+.why-item strong{color:var(--fg)}
+.why-item span{color:var(--dim)}
+.why-conclusion{
+  padding:10px 14px;background:var(--surface);border-radius:6px;
+  border-left:3px solid var(--accent);color:var(--fg);font-size:12px;line-height:1.6
+}
 
 /* Chart */
 .chart-sec{
@@ -1146,6 +1172,71 @@ function renderHeader(meta,candles){
     </div>`;
 }
 
+function generateWhyExplanation(analyses, norm, vt, vc){
+  const bullA=analyses.filter(a=>a.signal==='bull');
+  const bearA=analyses.filter(a=>a.signal==='bear');
+  const neuA=analyses.filter(a=>a.signal==='neutral');
+  const pct=Math.round(norm*100);
+
+  // 개요 섹션
+  let html=`<div class="why-section">
+    <div class="why-section-title info">📊 종합 판단 근거</div>
+    <div class="why-item">
+      <strong>${vt}</strong> — 전체 ${analyses.length}개 지표 중
+      <strong style="color:var(--bull)">매수 ${bullA.length}개</strong>,
+      <strong style="color:var(--warn)">중립 ${neuA.length}개</strong>,
+      <strong style="color:var(--bear)">매도 ${bearA.length}개</strong>이며,
+      종합 점수는 <strong>${pct}점</strong>입니다.
+    </div>
+  </div>`;
+
+  // 매수 근거
+  if(bullA.length){
+    html+=`<div class="why-section">
+      <div class="why-section-title bull">📈 매수 근거 (${bullA.length}가지)</div>`;
+    bullA.forEach(a=>{
+      const topDetail=a.details&&a.details.length?a.details[0]:'';
+      html+=`<div class="why-item">• <strong>${a.title}</strong>: <span>${a.summary}</span>${topDetail?`<br><span style="padding-left:10px;color:var(--dim)">→ ${topDetail}</span>`:''}
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+
+  // 매도 근거
+  if(bearA.length){
+    html+=`<div class="why-section">
+      <div class="why-section-title bear">📉 매도 근거 (${bearA.length}가지)</div>`;
+    bearA.forEach(a=>{
+      const topDetail=a.details&&a.details.length?a.details[0]:'';
+      html+=`<div class="why-item">• <strong>${a.title}</strong>: <span>${a.summary}</span>${topDetail?`<br><span style="padding-left:10px;color:var(--dim)">→ ${topDetail}</span>`:''}
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+
+  // 중립 (있으면 간략히)
+  if(neuA.length){
+    html+=`<div class="why-section">
+      <div class="why-section-title neutral">🟡 중립 항목 (${neuA.length}가지)</div>`;
+    neuA.forEach(a=>{
+      html+=`<div class="why-item">• <strong>${a.title}</strong>: <span>${a.summary}</span></div>`;
+    });
+    html+=`</div>`;
+  }
+
+  // 결론
+  let conclusion='';
+  if(norm>=0.65) conclusion='대부분의 기술적 지표가 <strong>강한 상승 신호</strong>를 보내고 있습니다. 추세 추종 전략을 고려할 수 있으나, 단기 과매수 여부를 함께 확인하세요.';
+  else if(norm>=0.55) conclusion='기술적 지표들이 <strong>완만한 상승 우위</strong>를 나타내고 있습니다. 추가 확인 후 분할 매수를 고려할 수 있습니다.';
+  else if(norm<=0.35) conclusion='대부분의 기술적 지표가 <strong>강한 하락 신호</strong>를 보내고 있습니다. 보유 중이라면 손절 라인을 재점검하세요.';
+  else if(norm<=0.45) conclusion='기술적 지표들이 <strong>완만한 하락 우위</strong>를 나타내고 있습니다. 신규 매수보다 관망을 추천합니다.';
+  else conclusion='지표들이 <strong>혼조세</strong>를 보이고 있어 방향성이 불명확합니다. 명확한 추세 형성을 확인한 후 진입을 고려하세요.';
+
+  html+=`<div class="why-conclusion">💡 <strong>종합 의견:</strong> ${conclusion}<br><span style="color:var(--dim);font-size:11px;margin-top:4px;display:block">※ 본 분석은 기술적 지표 기반 참고 자료이며, 투자 결정은 본인 책임입니다.</span></div>`;
+
+  return html;
+}
+
 function renderOverall(analyses){
   const scores=analyses.map(a=>a.score);
   const total=scores.reduce((a,b)=>a+b,0);
@@ -1172,7 +1263,21 @@ function renderOverall(analyses){
       <span><span class="tdot bull"></span>매수 ${bull}개</span>
       <span><span class="tdot neutral"></span>중립 ${neu}개</span>
       <span><span class="tdot bear"></span>매도 ${bear}개</span>
-    </div>`;
+    </div>
+    <button class="why-btn" id="whyBtn">🔍 왜 이 의견인가요?</button>
+    <div class="why-panel" id="whyPanel"></div>`;
+
+  $('whyBtn').addEventListener('click',function(){
+    const panel=$('whyPanel');
+    if(panel.classList.contains('open')){
+      panel.classList.remove('open');
+      this.textContent='🔍 왜 이 의견인가요?';
+    }else{
+      panel.innerHTML=generateWhyExplanation(analyses,norm,vt,vc);
+      panel.classList.add('open');
+      this.textContent='🔼 닫기';
+    }
+  });
 }
 
 function renderGrid(analyses){
