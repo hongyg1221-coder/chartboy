@@ -806,16 +806,26 @@ function analyzeCandleState(candles){
       oparts.push(`갭 하락 출발했지만 결국 양봉으로 마감했습니다. 하락을 선반영한 뒤 반등한 긍정적 신호이나, 전일 종가를 돌파해야 추세 전환으로 볼 수 있습니다.`);
       outlookClass='neutral';
     }else{
-      oparts.push(`양봉 마감으로 단기적으로 긍정적이나, 몸통이 크지 않아 강한 추세 신호로 보기는 어렵습니다. 거래량과 함께 판단하는 것이 좋습니다.`);
-      outlookClass='neutral';
+      if(volRatio>=1.5){
+        oparts.push(`몸통이 크지 않은 양봉이지만, 거래량이 평소 대비 ${volRatio.toFixed(1)}배로 의미 있게 증가했습니다. 거래량이 뒷받침된 상승은 세력의 개입 가능성이 있어 강한 추세 신호로 볼 수 있습니다. 단기 긍정적으로 해석됩니다.`);
+        outlookClass='bull';
+      }else{
+        oparts.push(`양봉 마감으로 단기적으로 긍정적이나, 몸통이 크지 않아 강한 추세 신호로 보기는 어렵습니다. 거래량이 평소 대비 ${(volRatio*100).toFixed(0)}% 수준으로 힘이 실리지 않았습니다.`);
+        outlookClass='neutral';
+      }
     }
   }else{
     if(gapDown){
       oparts.push(`갭 하락 출발 후 음봉 마감입니다. 이미 하락을 선반영했을 수 있으나, 지지선 근처인지를 확인해야 합니다. 지지선 위라면 단기 반등 가능성도 있습니다.`);
       outlookClass='bear';
     }else{
-      oparts.push(`음봉 마감으로 단기 주의가 필요합니다. 하락 추세 중이라면 추가 하락 가능성이 있고, 지지선 근처라면 반등을 노릴 수 있습니다.`);
-      outlookClass='bear';
+      if(volRatio>=1.5){
+        oparts.push(`음봉이지만 거래량이 평소 대비 ${volRatio.toFixed(1)}배로 급증했습니다. 거래량을 동반한 하락은 매도 세력의 강한 출회 신호일 수 있어, 단기 추가 하락 가능성을 주의해야 합니다.`);
+        outlookClass='bear';
+      }else{
+        oparts.push(`음봉 마감으로 단기 주의가 필요합니다. 다만 거래량이 평소 대비 ${(volRatio*100).toFixed(0)}% 수준으로 힘이 실리지 않아, 강한 하락 추세보다는 단순 조정일 가능성도 있습니다.`);
+        outlookClass='bear';
+      }
     }
   }
 
