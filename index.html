@@ -1795,13 +1795,71 @@ function generateWhyExplanation(analyses, norm, vt, vc){
     html+=`</div>`;
   }
 
-  // 결론
+  // 결론 — 주요 신호 감지 후 맞춤 서술
+  const allDet=analyses.flatMap(a=>a.details||[]);
+  const allTxt=allDet.join(' ');
+  const weeklyA=analyses.find(a=>a.id==='weekly');
+  const bbA=analyses.find(a=>a.id==='bb');
+  const volA=analyses.find(a=>a.id==='vol');
+  const rsiA=analyses.find(a=>a.id==='rsi');
+
+  // 월봉 패턴 감지
+  const hasMonthlyBear=allTxt.includes('월봉 삼봉')||allTxt.includes('월봉 트리플탑')||(allTxt.includes('헤드앤숄더')&&allTxt.includes('월봉'));
+  const hasMonthlyBull=allTxt.includes('월봉 역삼봉')||(allTxt.includes('역헤드앤숄더')&&allTxt.includes('월봉'));
+  // 주봉 반전
+  const weeklyScore=weeklyA?weeklyA.score:0;
+  const hasStrongWeekly=weeklyScore>=3;
+  const hasWeekly=weeklyScore>=2;
+  // 단기 돌파 패턴
+  const hasWBreakout=allTxt.includes('W')&&allTxt.includes('돌파');
+  const hasBoxBreakout=allTxt.includes('박스')&&(allTxt.includes('돌파 시도')||allTxt.includes('돌파!'));
+  // 볼린저 위치
+  const bbPos=(()=>{const m=(bbA&&bbA.details?bbA.details.join(' '):'').match(/위치.*?(\d+)%/);return m?parseInt(m[1]):null;})();
+  const nearBbUpper=bbPos!==null&&bbPos>78;
+  // 거래량
+  const lowVol=volA&&volA.signal!=='bull';
+  // 저항선 추출 (details 텍스트에서 고점/상단 뒤 숫자)
+  const resistM=allTxt.match(/(?:고점|상단)\s*\(?(\d[\d,.]+)/);
+  const resistLv=resistM?resistM[1]:null;
+  // RSI 과매수
+  const rsiVal=rsiA?(parseFloat((rsiA.summary||'').match(/([\d.]+)/)?.[1])||null):null;
+  const rsiOB=rsiVal&&rsiVal>68;
+
   let conclusion='';
-  if(norm>=0.65) conclusion='대부분의 기술적 지표가 <strong>강한 상승 신호</strong>를 보내고 있습니다. 추세 추종 전략을 고려할 수 있으나, 단기 과매수 여부를 함께 확인하세요.';
-  else if(norm>=0.55) conclusion='기술적 지표들이 <strong>완만한 상승 우위</strong>를 나타내고 있습니다. 추가 확인 후 분할 매수를 고려할 수 있습니다.';
-  else if(norm<=0.35) conclusion='대부분의 기술적 지표가 <strong>강한 하락 신호</strong>를 보내고 있습니다. 보유 중이라면 손절 라인을 재점검하세요.';
-  else if(norm<=0.45) conclusion='기술적 지표들이 <strong>완만한 하락 우위</strong>를 나타내고 있습니다. 신규 매수보다 관망을 추천합니다.';
-  else conclusion='지표들이 <strong>혼조세</strong>를 보이고 있어 방향성이 불명확합니다. 명확한 추세 형성을 확인한 후 진입을 고려하세요.';
+  if(norm>=0.65){
+    const drivers=[];
+    if(hasStrongWeekly)drivers.push('주봉 완전 장악형');
+    else if(hasWeekly)drivers.push('주봉 반전 신호');
+    if(hasWBreakout)drivers.push('쌍바닥 네크라인 돌파');
+    if(hasBoxBreakout)drivers.push('박스권 상단 돌파 시도');
+    const dStr=drivers.length?`<strong>${drivers.join(' + ')}</strong>가 확인됩니다. `:'대부분의 지표가 강한 상승 신호를 보내고 있습니다. ';
+    if(hasMonthlyBear){
+      const rNote=resistLv?` <strong style="color:var(--warn)">${resistLv} 저항</strong>에서 반락 여부를 반드시 확인하고, 거래량 동반 돌파 시 추가 매수·돌파 실패 시 익절을 고려하세요.`:'';
+      conclusion=`${dStr}<strong>단기 상승 가능성이 높습니다.</strong> 단, <strong style="color:var(--bear)">월봉 헤드앤숄더(삼봉)/트리플탑 경고</strong>가 겹쳐 중기적으로는 저항이 강합니다.${rNote}`;
+    }else if(rsiOB){
+      conclusion=`${dStr}<strong>단기 상승 추세가 강합니다.</strong> RSI ${rsiVal.toFixed(1)}로 과매수 근접 구간이므로, 단기 조정 가능성도 열어두고 접근하세요.`;
+    }else if(nearBbUpper){
+      conclusion=`${dStr}<strong>단기 상승 추세가 강합니다.</strong> 볼린저밴드 상단(${bbPos}% 위치)에 근접해 단기 숨고르기 가능성이 있습니다. 상단 종가 돌파 시 추가 상승을 기대할 수 있습니다.`;
+    }else{
+      conclusion=`${dStr}<strong>단기 상승 추세가 강합니다.</strong>${lowVol?' 거래량이 평균 미만이므로 거래량 동반 여부를 함께 확인하세요.':' 추세 추종 전략을 고려할 수 있습니다.'}`;
+    }
+  }else if(norm>=0.55){
+    if(hasMonthlyBear){
+      conclusion=`기술적 지표가 <strong>완만한 상승 우위</strong>를 보이나, <strong style="color:var(--bear)">월봉 삼봉/트리플탑 경고</strong>가 있습니다. 적극 매수보다 분할 접근이 적합하며, 월봉 저항선 돌파 여부를 확인하세요.`;
+    }else{
+      conclusion=`기술적 지표들이 <strong>완만한 상승 우위</strong>를 나타내고 있습니다. 추가 확인 후 분할 매수를 고려할 수 있습니다.`;
+    }
+  }else if(norm<=0.35){
+    if(hasMonthlyBull){
+      conclusion=`대부분의 단기 지표가 하락 신호이나, <strong style="color:var(--bull)">월봉 역헤드앤숄더</strong> 패턴이 감지됩니다. 중기 반전 가능성을 열어두되, 단기 추가 하락에 대비하세요.`;
+    }else{
+      conclusion=`대부분의 기술적 지표가 <strong>강한 하락 신호</strong>를 보내고 있습니다. 보유 중이라면 손절 라인을 재점검하세요.`;
+    }
+  }else if(norm<=0.45){
+    conclusion=`기술적 지표들이 <strong>완만한 하락 우위</strong>를 나타내고 있습니다. 신규 매수보다 관망을 추천합니다.`;
+  }else{
+    conclusion=`지표들이 <strong>혼조세</strong>를 보이고 있어 방향성이 불명확합니다. 명확한 추세 형성을 확인한 후 진입을 고려하세요.`;
+  }
 
   html+=`<div class="why-conclusion">💡 <strong>종합 의견:</strong> ${conclusion}<br><span style="color:var(--dim);font-size:11px;margin-top:4px;display:block">※ 본 분석은 기술적 지표 기반 참고 자료이며, 투자 결정은 본인 책임입니다.</span></div>`;
 
