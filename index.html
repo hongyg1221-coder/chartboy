@@ -621,9 +621,21 @@ function analyzeIchimoku(candles){
 
   if(sa&&sb){
     const ct=Math.max(sa,sb),cb=Math.min(sa,sb);
-    if(cv>ct){det.push('✅ 현재가 구름대 위 (강세)');sc+=2;}
-    else if(cv<cb){det.push('❌ 현재가 구름대 아래 (약세)');sc-=2;}
-    else det.push('⚠️ 현재가 구름대 안 (방향 불명)');
+    if(cv>ct){
+      const pct=((cv-ct)/ct*100).toFixed(1);
+      det.push(`✅ 현재가 구름대 위 (강세) — 구름 상단(${fmt(ct)}) +${pct}%`);sc+=2;
+    }else if(cv<cb){
+      // 구름대 하단 근처 지지 여부
+      const nearBot=cv>=cb*0.98;
+      if(nearBot){
+        det.push(`⚠️ 구름대 하단(${fmt(cb)}) 근처 — 지지 여부 주목 (하단 이탈 시 추가 하락)`);
+      }else{
+        det.push(`❌ 현재가 구름대 아래 (약세) — 구름 하단(${fmt(cb)}) 회복이 반등 조건`);
+      }
+      sc-=2;
+    }else{
+      det.push(`⚠️ 현재가 구름대 안 (방향 불명) — 상단(${fmt(ct)}) 돌파 시 강세 전환`);
+    }
     sa>sb?(det.push('✅ 양봉 구름 (상승)'),sc++):(det.push('❌ 음봉 구름 (하락)'),sc--);
   }
   if(t&&k){
@@ -1184,6 +1196,49 @@ function analyzePattern(candles){
     if(hammers>=2){det.push('✅ 연속 망치형(빵빵빵) → 바닥 신호!');sc+=2;}
   }
 
+  // 소서/라운딩 바텀 (동그란 언덕 돌파 모양) - 완만한 U자 바닥
+  if(n>=35){
+    const seg=candles.slice(-35);
+    const lo=seg.map(c=>c.low),cl35=seg.map(c=>c.close);
+    const L=lo.length;
+    const left=lo.slice(0,Math.floor(L/3)),mid=lo.slice(Math.floor(L/3),Math.floor(L*2/3)),right=lo.slice(Math.floor(L*2/3));
+    const avgL=left.reduce((s,v)=>s+v,0)/left.length;
+    const avgM=mid.reduce((s,v)=>s+v,0)/mid.length;
+    const avgR=right.reduce((s,v)=>s+v,0)/right.length;
+    const minAll=Math.min(...lo);
+    const minIdx=lo.indexOf(minAll);
+    const midBand=minIdx>Math.floor(L/4)&&minIdx<Math.floor(L*3/4);
+    const isU=avgM<avgL*0.98&&avgM<avgR*0.98&&Math.abs(avgL-avgR)/avgL<0.08;
+    const recovering=cl35[L-1]>cl35[Math.floor(L*2/3)];
+    if(midBand&&isU&&recovering){
+      const rimPct=((cl35[L-1]-avgM)/avgM*100).toFixed(1);
+      det.push(`🔵 소서(동그란 언덕) 패턴 — 완만한 U자 바닥 후 회복 중 (+${rimPct}%)`);sc+=2;
+    }
+  }
+  // 컵위드핸들 (Cup with Handle) - 완만한 컵 + 작은 눌림(핸들) 후 돌파 대기
+  if(n>=45){
+    const seg=candles.slice(-45);
+    const cl45=seg.map(c=>c.close),lo45=seg.map(c=>c.low);
+    const L45=cl45.length;
+    // 컵: 초반 고점 → 중간 저점 → 후반 고점 회복
+    const leftRim=Math.max(...cl45.slice(0,10));
+    const cupMin=Math.min(...lo45.slice(8,30));
+    const rightRim=Math.max(...cl45.slice(28,38));
+    const rimDiff=Math.abs(leftRim-rightRim)/leftRim*100;
+    const cupDepth=(leftRim-cupMin)/leftRim*100;
+    // 핸들: 최근 7일 소폭 눌림
+    const handleHigh=Math.max(...cl45.slice(35,42));
+    const handleLow=Math.min(...cl45.slice(35,42));
+    const handlePull=(handleHigh-handleLow)/handleHigh*100;
+    const curClose=cl45[L45-1];
+    if(rimDiff<12&&cupDepth>5&&cupDepth<35&&handlePull>2&&handlePull<15){
+      if(curClose>handleHigh*0.99){
+        det.push(`🏆 컵위드핸들 돌파! (컵 깊이 ${cupDepth.toFixed(0)}%, 핸들 조정 ${handlePull.toFixed(0)}%) → 강한 매수 신호`);sc+=3;
+      }else{
+        det.push(`📌 컵위드핸들 패턴 — 핸들 조정 완료 대기 중 (핸들 고점 ${fmt(handleHigh)} 돌파 시 진입)`);sc+=1;
+      }
+    }
+  }
   // 삼중바닥 (매수타점 #4) - 3번의 비슷한 저점
   if(n>=60){
     const seg=candles.slice(-60),lows=seg.map(c=>c.low),mins3=[];
