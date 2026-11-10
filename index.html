@@ -1239,6 +1239,21 @@ function analyzePattern(candles){
       }
     }
   }
+  // 연속 캔들 동일고점 (강한 저항선 감지)
+  if(n>=8){
+    const seg=candles.slice(-10);
+    const highs=seg.map(c=>c.high);
+    const maxH=Math.max(...highs);
+    const nearMax=highs.filter(h=>h>=maxH*0.99);
+    const curClose=cl[cl.length-1];
+    if(nearMax.length>=3){
+      if(curClose>maxH){
+        det.push(`🔥 연속 동일고점 돌파! (최근 10일 중 ${nearMax.length}개 고점이 ${fmt(maxH)} 근처 → 저항선 뚫림)`);sc+=2;
+      }else{
+        det.push(`⚠️ 연속 동일고점 저항 (최근 10일 중 ${nearMax.length}개 고점이 ${fmt(maxH)} 근처) — 이 가격대 돌파 여부가 핵심`);sc-=1;
+      }
+    }
+  }
   // 삼중바닥 (매수타점 #4) - 3번의 비슷한 저점
   if(n>=60){
     const seg=candles.slice(-60),lows=seg.map(c=>c.low),mins3=[];
@@ -1491,16 +1506,25 @@ function analyzePattern(candles){
     const idx=det.findIndex(d=>d.includes('3묶음 진행 중'));
     if(idx!==-1)det[idx]='📌 단기 하락 진행 중이나 월봉 역삼봉 상승 반전 구조 확인 중 — 바닥 근처 가능성';
   }
-  // 월봉 20선 위치 (중기 추세 핵심 기준)
+  // 월봉 20선 위치 (중기 추세 핵심 기준 + 기본 조정 완료 타이밍)
   if(mn>=20){
     const mCl=months.map(m=>m.close);
     const mMA20=mCl.slice(mn-20).reduce((s,v)=>s+v,0)/20;
     const cur=cl[cl.length-1];
     if(cur>mMA20){
-      det.push(`📌 월봉 20선(${fmt(mMA20)}) 위 — 중기 추세 강세`);sc+=1;
+      const pct=((cur-mMA20)/mMA20*100).toFixed(1);
+      if(parseFloat(pct)<3){
+        det.push(`📌 월봉 20선(${fmt(mMA20)}) 근처(+${pct}%) — 교과서적 기본 조정 완료 구간, 반등 타이밍 주목`);sc+=2;
+      }else{
+        det.push(`📌 월봉 20선(${fmt(mMA20)}) 위 (+${pct}%) — 중기 추세 강세`);sc+=1;
+      }
     }else{
       const gap=((mMA20-cur)/mMA20*100).toFixed(1);
-      det.push(`⚠️ 월봉 20선(${fmt(mMA20)}) 아래 (${gap}% 하회) — 중기 추세 약세, 월봉 20선 회복이 추세 전환 조건`);sc-=1;
+      if(parseFloat(gap)<3){
+        det.push(`⚠️ 월봉 20선(${fmt(mMA20)}) 근접 (${gap}% 하회) — 지지 여부 주목, 이탈 시 추가 조정 가능`);sc-=1;
+      }else{
+        det.push(`❌ 월봉 20선(${fmt(mMA20)}) 아래 (${gap}% 하회) — 중기 추세 약세, 월봉 20선 회복이 추세 전환 조건`);sc-=1;
+      }
     }
   }
   if(!det.length)det.push('특별한 패턴 없음 (추세 관찰 중)');
