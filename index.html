@@ -846,18 +846,50 @@ function analyzeCandleState(candles){
     oparts.push(`장중 큰 폭으로 상승했다가 반락한 형태입니다. 고점에서 매물이 쏟아진 신호로, 단기 하락 가능성이 있습니다. 다음 날 음봉으로 확인될 경우 단기 고점 가능성이 높습니다.`);
     outlookClass='bear';
   }else if(typeKo.includes('도지')){
-    oparts.push(`매수·매도 세력이 균형을 이룬 형태입니다. 방향성 불확실 구간으로, 다음 날 봉의 방향과 거래량으로 추세를 판단해야 합니다. 큰 추세 전환 직전에 자주 나타납니다.`);
+    // 도지 — 전일 종가·시가 대비 위치로 방향 편향 판단
+    const dojiAbovePrevClose=c.close>p.close;
+    const dojiAbovePrevOpen=c.close>=p.open;
+    let dojiNote;
+    if(dojiAbovePrevClose){
+      dojiNote=`오늘 도지는 전일 종가(${Math.round(p.close).toLocaleString()})보다 위에서 형성되어 약한 강세 편향이 있습니다.`;
+    }else if(dojiAbovePrevOpen){
+      dojiNote=`오늘 도지는 전일 시가(${Math.round(p.open).toLocaleString()})와 종가 사이에서 형성되어 방향성이 더욱 불분명합니다.`;
+    }else{
+      dojiNote=`오늘 도지는 전일 시가(${Math.round(p.open).toLocaleString()})보다 아래에서 형성되어 약한 약세 편향이 있습니다.`;
+    }
+    oparts.push(`매수·매도 세력이 균형을 이룬 형태입니다. ${dojiNote} 다음 날 봉의 방향과 거래량으로 추세를 판단해야 합니다. 큰 추세 전환 직전에 자주 나타납니다.`);
     outlookClass='neutral';
   }else if(isBull){
+    // 소/일반 양봉 — 전일 종가·고점 대비 오늘 종가 위치로 추가 판단
+    const closeAbovePrevClose2=c.close>p.close;
+    const closeAbovePrevHigh=c.close>p.high;
+    const prevCloseFmt2=Math.round(p.close).toLocaleString();
+    const prevHighFmt=Math.round(p.high).toLocaleString();
+    const prevOpenFmt2=Math.round(p.open).toLocaleString();
     if(gapDown){
-      oparts.push(`갭 하락 출발했지만 결국 양봉으로 마감했습니다. 하락을 선반영한 뒤 반등한 긍정적 신호이나, 전일 종가를 돌파해야 추세 전환으로 볼 수 있습니다.`);
-      outlookClass='neutral';
+      if(closeAbovePrevClose2){
+        oparts.push(`갭 하락으로 출발했음에도 <strong>전일 종가(${prevCloseFmt2})까지 완전히 회복하며</strong> 양봉 마감했습니다. 하락을 완전히 되돌린 강한 반전 신호로, 단기 긍정적으로 해석됩니다.`);
+        outlookClass='bull';
+      }else if(c.close>=p.open){
+        oparts.push(`갭 하락 출발 후 전일 시가(${prevOpenFmt2})를 회복하며 양봉 마감했습니다. 하방 지지 확인 신호이나, <strong>전일 종가(${prevCloseFmt2}) 돌파 여부를 추가로 확인해야</strong> 추세 전환으로 볼 수 있습니다.`);
+        outlookClass='neutral';
+      }else{
+        oparts.push(`갭 하락 출발했지만 결국 양봉으로 마감했습니다. 하락을 선반영한 뒤 반등한 긍정적 신호이나, 전일 시가(${prevOpenFmt2}) 돌파 여부를 확인해야 합니다.`);
+        outlookClass='neutral';
+      }
     }else{
       if(volRatio>=1.5){
-        oparts.push(`몸통이 크지 않은 양봉이지만, 거래량이 평소 대비 ${volRatio.toFixed(1)}배로 의미 있게 증가했습니다. 거래량이 뒷받침된 상승은 세력의 개입 가능성이 있어 강한 추세 신호로 볼 수 있습니다. 단기 긍정적으로 해석됩니다.`);
+        const lvlNote=closeAbovePrevHigh?`전일 고점(${prevHighFmt})까지 돌파한 `:closeAbovePrevClose2?`전일 종가(${prevCloseFmt2})를 돌파한 `:``;
+        oparts.push(`${lvlNote}양봉에 거래량이 평소 대비 ${volRatio.toFixed(1)}배로 급증했습니다. 거래량을 동반한 상승은 세력의 강한 매집 신호일 수 있어 단기 긍정적으로 해석됩니다.`);
         outlookClass='bull';
+      }else if(closeAbovePrevHigh){
+        oparts.push(`<strong>전일 고점(${prevHighFmt})을 종가로 돌파</strong>했습니다. 이전 저항을 넘은 의미 있는 움직임이나, 거래량이 평소의 ${(volRatio*100).toFixed(0)}% 수준으로 적습니다. 다음 날 추가 상승으로 확인이 필요합니다.`);
+        outlookClass='bull';
+      }else if(closeAbovePrevClose2){
+        oparts.push(`전일 종가(${prevCloseFmt2})를 돌파하며 양봉 마감했습니다. 단기 흐름이 긍정적이나, 거래량이 평소의 ${(volRatio*100).toFixed(0)}% 수준으로 적어 강한 추세보다는 기술적 반등으로 볼 수 있습니다.`);
+        outlookClass='neutral';
       }else{
-        oparts.push(`양봉 마감으로 단기적으로 긍정적이나, 몸통이 크지 않아 강한 추세 신호로 보기는 어렵습니다. 거래량이 평소 대비 ${(volRatio*100).toFixed(0)}% 수준으로 힘이 실리지 않았습니다.`);
+        oparts.push(`양봉 마감이지만 종가가 전일 종가(${prevCloseFmt2})에 미치지 못했습니다. 거래량도 평소의 ${(volRatio*100).toFixed(0)}% 수준으로 적어, 단기 반등 시도이나 힘이 실리지 않은 상태입니다.`);
         outlookClass='neutral';
       }
     }
