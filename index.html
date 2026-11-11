@@ -1889,11 +1889,14 @@ function mergeTodayQuote(candles, meta){
   const last=result[result.length-1];
   const lastDay=new Date(last.date.getFullYear(),last.date.getMonth(),last.date.getDate());
 
-  if(price&&open&&high&&low){
-    // meta에 현재 시세가 있으면 오늘 봉 생성/갱신
+  if(price){
+    // regularMarketPrice만 있어도 오늘 봉 갱신 — open/high/low는 가능한 값 사용
+    const o=open||last.open||price;
+    const h2=high?Math.max(high,price):(last.high?Math.max(last.high,price):price);
+    const l2=low?Math.min(low,price):(last.low?Math.min(last.low,price):price);
     const todayCandle={
-      date:mktDay, open, high, low, close:price,
-      volume:vol||0, isLive:isMarketHours,
+      date:mktDay, open:o, high:h2, low:l2, close:price,
+      volume:vol||last.volume||0, isLive:isMarketHours,
       liveTime:isMarketHours?liveNow:undefined
     };
     if(lastDay.getTime()===mktDay.getTime()){
@@ -1904,7 +1907,7 @@ function mergeTodayQuote(candles, meta){
     return result;
   }
 
-  // meta에 시세가 없어도 historical 마지막 봉이 오늘이고 장중이면 isLive 표시
+  // meta에 price도 없으면 historical 마지막 봉이 오늘이고 장중이면 isLive만 표시
   if(lastDay.getTime()===mktDay.getTime()&&isMarketHours){
     result[result.length-1]={...last, isLive:true, liveTime:liveNow};
   }
