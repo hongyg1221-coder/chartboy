@@ -268,7 +268,7 @@ body{
 
 <div class="app">
   <header class="site-hd">
-    <div class="site-title">📊 한국주식 분석기</div>
+    <div class="site-title" id="siteLogo" style="cursor:pointer">📊 한국주식 분석기</div>
     <div class="site-sub">종목명 또는 종목코드 입력 → 이동평균선·MACD·RSI·일목균형표·캔들/차트 패턴 자동 분석</div>
     <div class="search-row">
       <div class="search-wrap">
@@ -2809,6 +2809,7 @@ async function runBuyEntry(){
   $('buyEntryBtn').disabled=true;
   document.querySelectorAll('.scan-btn:not(#buyEntryBtn)').forEach(b=>b.disabled=true);
 
+  $('results').hidden=true;
   $('scanSection').hidden=true;
   $('buyEntrySection').hidden=false;
   $('beScanProgress').hidden=false;
@@ -2904,6 +2905,7 @@ async function runScan(mkt, pushHistory=true){
   const otherBtn=scanMarket==='us'?$('scanBtn'):$('scanBtnUs');
   btn.textContent='스캔 중...';btn.disabled=true;
   otherBtn.disabled=true;
+  $('results').hidden=true;
   $('buyEntrySection').hidden=true;
   $('scanSection').hidden=false;
   $('scanProgress').hidden=false;
@@ -3036,6 +3038,17 @@ function renderScanTable(){
 $('scanBtn').addEventListener('click',()=>runScan('kr'));
 $('scanBtnUs').addEventListener('click',()=>runScan('us'));
 $('buyEntryBtn').addEventListener('click',()=>runBuyEntry());
+$('siteLogo').addEventListener('click',()=>{
+  $('results').hidden=true;
+  $('scanSection').hidden=true;
+  $('buyEntrySection').hidden=true;
+  $('loadingState').hidden=true;
+  $('errorState').hidden=true;
+  $('searchInput').value='';
+  $('searchInput').focus();
+  history.pushState({page:'home'},'','');
+  window.scrollTo(0,0);
+});
 document.querySelectorAll('#filterRow .fbtn').forEach(btn=>{
   btn.addEventListener('click',function(){
     document.querySelectorAll('#filterRow .fbtn').forEach(b=>b.classList.remove('active'));
@@ -3095,6 +3108,7 @@ async function runAnalysis(query, pushHistory=true){
   $('errorState').hidden=true;
   $('results').hidden=true;
   $('scanSection').hidden=true;
+  $('buyEntrySection').hidden=true;
   destroyCharts();
   try{
     const{res,ticker}=await fetchAny(query);
