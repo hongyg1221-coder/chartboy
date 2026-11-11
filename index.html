@@ -2011,7 +2011,7 @@ async function fetchYF(sym,range='2y'){
   // server.py가 /api/ 경로로 Yahoo Finance를 대신 요청해 줌
   const url=`/api/${sym}?interval=1d&range=${range}`;
   const ctrl=new AbortController();
-  const tid=setTimeout(()=>ctrl.abort(),12000);
+  const tid=setTimeout(()=>ctrl.abort(),5000);
   try{
     const r=await fetch(url,{signal:ctrl.signal});
     if(!r.ok)throw new Error(`HTTP ${r.status}`);
@@ -3050,12 +3050,13 @@ async function runTopPicks(pushHistory=true){
   $('tpBody').innerHTML=`<tr><td colspan="7" class="scan-empty">분석 중...</td></tr>`;
   topPicksResults=[];
 
-  // 종목 로드 (한국 종목만)
+  // 종목 로드 (추천종목 전용 유니버스: KOSPI 전체 + KOSDAQ 상위 700개)
   let universe=[];
   try{
     const r=await fetch('/stocks');
     const d=await r.json();
-    universe=(d.kr||[]).map(s=>({c:s.symbol.replace(/\.(KS|KQ)$/,''),n:s.name,m:s.symbol.endsWith('.KQ')?'KQ':'KS',sym:s.symbol}));
+    const list=d.picks_kr||d.kr||[];
+    universe=list.map(s=>({c:s.symbol.replace(/\.(KS|KQ)$/,''),n:s.name,m:s.symbol.endsWith('.KQ')?'KQ':'KS',sym:s.symbol}));
   }catch(e){}
   if(!universe.length)universe=STOCKS.filter(s=>s.m==='KS'||s.m==='KQ');
 
@@ -3063,9 +3064,9 @@ async function runTopPicks(pushHistory=true){
   let done=0;
   const preFiltered=[];
 
-  // 1단계: 차트 기준 필터 (배치 10)
-  for(let i=0;i<universe.length;i+=10){
-    const batch=universe.slice(i,i+10);
+  // 1단계: 차트 기준 필터 (배치 20)
+  for(let i=0;i<universe.length;i+=20){
+    const batch=universe.slice(i,i+20);
     await Promise.all(batch.map(async s=>{
       const sym=s.sym||`${s.c}.${s.m}`;
       try{
