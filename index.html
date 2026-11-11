@@ -284,6 +284,7 @@ body{
       <button class="scan-btn active-mkt" id="scanBtn" data-mkt="kr">🇰🇷 한국 스캔</button>
       <button class="scan-btn" id="scanBtnUs" data-mkt="us">🇺🇸 미국 스캔</button>
       <button class="scan-btn" id="buyEntryBtn" data-mkt="entry" style="border-color:#f59e0b;color:#f59e0b">🎯 매수타점</button>
+      <button class="scan-btn" id="topPicksBtn" data-mkt="picks" style="border-color:#a855f7;color:#a855f7">⭐ 오늘의 추천종목</button>
     </div>
   </header>
 
@@ -353,6 +354,32 @@ body{
         </thead>
         <tbody id="buyEntryBody">
           <tr><td colspan="9" class="scan-empty">🎯 매수타점 버튼을 눌러주세요</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 추천종목 섹션 -->
+  <section id="topPicksSection" hidden>
+    <div class="scan-hd">
+      <h2>⭐ 오늘의 추천종목</h2>
+      <div id="tpDateNote" style="font-size:11px;color:#94a3b8;margin-top:2px"></div>
+      <div style="font-size:12px;color:var(--dim);margin-left:4px">240일선 위 · 돌파 임박 · MA 정배열 · 외인/기관 순매수 종목</div>
+      <div class="scan-progress" id="tpProgress" hidden>
+        <div class="prog-bar"><div class="prog-fill" id="tpFill" style="width:0%"></div></div>
+        <div class="prog-txt" id="tpTxt">준비 중...</div>
+      </div>
+    </div>
+    <div class="scan-wrap">
+      <table class="scan-table" id="tpTable">
+        <thead>
+          <tr>
+            <th>#</th><th>종목명</th><th>현재가</th><th>등락률</th>
+            <th>종합점수</th><th>핵심 근거</th><th>주의사항</th>
+          </tr>
+        </thead>
+        <tbody id="tpBody">
+          <tr><td colspan="7" class="scan-empty">⭐ 추천종목 버튼을 눌러주세요</td></tr>
         </tbody>
       </table>
     </div>
@@ -2892,6 +2919,224 @@ async function runBuyEntry(pushHistory=true){
   buyEntryRunning=false;
 }
 
+// ── 추천종목 ──────────────────────────────────────────────
+let topPicksRunning=false, topPicksResults=[];
+
+function calcPickScore(r, investor){
+  let score=0;
+  const reasons=[], warns=[];
+
+  // MA 정배열
+  if(r.maSignal==='bull'){score+=2;reasons.push('MA 정배열');}
+  else if(r.maSignal==='bear'){score-=1;}
+
+  // MACD
+  if(r.macdSignal==='bull'){score+=1;reasons.push('MACD 긍정');}
+
+  // 돌파 상태
+  if(r.brokeToday){score+=2;reasons.push('✅ 오늘 돌파!');}
+  else{score+=1;reasons.push('돌파 임박');}
+
+  // 거래량
+  const vr=r.volRatio||1;
+  if(vr>=1.5&&vr<=4){score+=1;reasons.push(`거래량 ${vr.toFixed(1)}배`);}
+  else if(vr>4){score-=1;warns.push(`거래량 ${vr.toFixed(1)}배 급증 — 세력 출회 주의`);}
+
+  // 캔들 패턴
+  const ct=r.candleType||'';
+  if(ct.includes('슈팅스타')||ct.includes('뚜껑')){
+    score-=2;warns.push(`${ct} — 단기 하락 주의`);
+  }else if(ct.includes('망치')||ct.includes('샅바형')){
+    score+=1;reasons.push(ct);
+  }else if(r.isBull&&r.upperPct<20){
+    score+=1;reasons.push('깔끔한 양봉');
+  }
+
+  // 수급
+  if(investor&&investor.days&&investor.days.length){
+    const d0=investor.days[0];
+    const f=d0.foreign||0, ins=d0.institution||0;
+    const fmtS=n=>{const a=Math.abs(n);return a>=10000?`${(a/10000).toFixed(1)}만주`:a>=1000?`${(a/1000).toFixed(1)}천주`:`${a}주`;};
+    // 연속 순매수 계산
+    let fCnt=0,iCnt=0;
+    for(const d of investor.days){if(d.foreign>0)fCnt++;else break;}
+    for(const d of investor.days){if(d.institution>0)iCnt++;else break;}
+
+    if(f>0&&ins>0){
+      score+=3;
+      reasons.push(`외인+기관 동반 순매수 (${fmtS(f)}+${fmtS(ins)})`);
+      if(fCnt>=2||iCnt>=2){
+        const parts=[];
+        if(fCnt>=2)parts.push(`외인 ${fCnt}일 연속`);
+        if(iCnt>=2)parts.push(`기관 ${iCnt}일 연속`);
+        reasons.push(parts.join(', ')+' 순매수');
+      }
+    }else if(f>0){
+      score+=1;reasons.push(`외인 순매수 ${fmtS(f)}`);
+      if(fCnt>=2)reasons.push(`외인 ${fCnt}일 연속`);
+    }else if(ins>0){
+      score+=1;reasons.push(`기관 순매수 ${fmtS(ins)}`);
+      if(iCnt>=2)reasons.push(`기관 ${iCnt}일 연속`);
+    }else if(f<0&&ins<0){
+      score-=3;warns.push(`외인·기관 동반 순매도`);
+    }else if(f<0){
+      warns.push(`외인 순매도 ${fmtS(Math.abs(f))}`);
+    }else if(ins<0){
+      warns.push(`기관 순매도 ${fmtS(Math.abs(ins))}`);
+    }
+  }
+  return{score,reasons,warns};
+}
+
+function renderTopPicks(){
+  if(!topPicksResults.length){
+    $('tpBody').innerHTML=`<tr><td colspan="7" class="scan-empty">조건을 충족하는 종목이 없습니다</td></tr>`;
+    return;
+  }
+  $('tpBody').innerHTML=topPicksResults.map((r,i)=>{
+    const scoreColor=r.score>=8?'#a855f7':r.score>=6?'#22c55e':'#f59e0b';
+    const stars=r.score>=8?'⭐⭐⭐':r.score>=6?'⭐⭐':'⭐';
+    const reasonHtml=r.reasons.map(s=>`<span style="background:#1e3a2f;color:#86efac;padding:1px 5px;border-radius:3px;font-size:11px;white-space:nowrap">${s}</span>`).join(' ');
+    const warnHtml=r.warns.map(s=>`<span style="background:#3a1f1f;color:#fca5a5;padding:1px 5px;border-radius:3px;font-size:11px;white-space:nowrap">${s}</span>`).join(' ');
+    return`<tr data-sym="${r.sym}" style="cursor:pointer">
+      <td class="rank">${i+1}</td>
+      <td class="sname">${r.name}<br><span style="font-size:10px;color:#64748b">${r.market==='KS'?'KOSPI':'KOSDAQ'}</span></td>
+      <td>${fmt(r.price)}</td>
+      <td style="color:${r.chg>=0?'var(--bull)':'var(--bear)'}">${fmtPct(r.chg)}</td>
+      <td style="color:${scoreColor};font-weight:700;font-size:14px">${stars}<br>${r.score}점</td>
+      <td style="line-height:1.9">${reasonHtml}</td>
+      <td style="line-height:1.9">${warnHtml||'—'}</td>
+    </tr>`;
+  }).join('');
+  $('tpBody').querySelectorAll('tr[data-sym]').forEach(tr=>{
+    tr.addEventListener('click',()=>{
+      $('searchInput').value=tr.querySelector('.sname').textContent.split('\n')[0].trim();
+      window.scrollTo(0,0);
+      runAnalysis(tr.dataset.sym);
+    });
+  });
+}
+
+async function runTopPicks(pushHistory=true){
+  if(topPicksRunning)return;
+  topPicksRunning=true;
+  if(pushHistory)history.pushState({page:'picks'},'','?picks=1');
+
+  $('results').hidden=true;$('scanSection').hidden=true;
+  $('buyEntrySection').hidden=true;$('topPicksSection').hidden=false;
+  $('tpProgress').hidden=false;
+  $('tpBody').innerHTML=`<tr><td colspan="7" class="scan-empty">분석 중...</td></tr>`;
+  topPicksResults=[];
+
+  // 종목 로드 (한국 종목만)
+  let universe=[];
+  try{
+    const r=await fetch('/stocks');
+    const d=await r.json();
+    universe=(d.kr||[]).map(s=>({c:s.symbol.replace(/\.(KS|KQ)$/,''),n:s.name,m:s.symbol.endsWith('.KQ')?'KQ':'KS',sym:s.symbol}));
+  }catch(e){}
+  if(!universe.length)universe=STOCKS.filter(s=>s.m==='KS'||s.m==='KQ');
+
+  const total=universe.length;
+  let done=0;
+  const preFiltered=[];
+
+  // 1단계: 차트 기준 필터 (배치 10)
+  for(let i=0;i<universe.length;i+=10){
+    const batch=universe.slice(i,i+10);
+    await Promise.all(batch.map(async s=>{
+      const sym=s.sym||`${s.c}.${s.m}`;
+      try{
+        const res=await fetchYF(sym,'1y');
+        const candles=parseCandles(res);
+        if(candles.length<60)return;
+        const cl=candles.map(c=>c.close);
+        const n=candles.length-1;
+        const last=candles[n];
+
+        // 240일선 위 (필수)
+        const ma240v=cl.length>=240?cl.slice(-240).reduce((a,v)=>a+v,0)/240:null;
+        if(ma240v&&last.close<ma240v)return;
+
+        // 매수타점 존재 (필수)
+        const be=calcBuyEntry(candles);
+        if(!be)return;
+        const lv=be.levels[0];
+        if(lv.gapAbove)return; // 갭상승 제외
+
+        // MA·MACD 신호
+        const maR=analyzeMA(candles);
+        const macdR=analyzeMACD(candles);
+        // MA 역배열이면 제외
+        if(maR.signal==='bear')return;
+
+        // 거래량 비율
+        const vols=candles.slice(-21,-1).map(c=>c.volume);
+        const avgVol=vols.reduce((a,v)=>a+v,0)/vols.length;
+        const volRatio=avgVol>0?last.volume/avgVol:1;
+
+        // 캔들 패턴
+        const cst=analyzeCandleState(candles);
+
+        // 차트 종합 점수
+        const analyses=runAll(candles);
+        let tot=0;analyses.forEach(a=>tot+=a.score);
+        const maxS=analyses.length*3;
+        const norm=(tot+maxS)/(maxS*2);
+        const prev=candles[n-1];
+        const chg=prev?(last.close-prev.close)/prev.close*100:0;
+
+        preFiltered.push({
+          sym,name:s.n,market:s.m,price:last.close,chg,norm,
+          brokeToday:lv.brokeToday,gapAbove:lv.gapAbove,
+          volRatio,maSignal:maR.signal,macdSignal:macdR.signal,
+          candleType:cst.typeKo||'',upperPct:cst.upperPct||0,isBull:cst.isBull,
+        });
+      }catch(e){}
+      done++;
+      const pct=Math.round(done/total*100);
+      $('tpFill').style.width=pct+'%';
+      $('tpTxt').textContent=`1단계 차트 분석: ${done}/${total} (${pct}%) — 조건 충족: ${preFiltered.length}개`;
+    }));
+  }
+
+  // 2단계: 차트 점수 순 상위 60개만 수급 조회
+  preFiltered.sort((a,b)=>b.norm-a.norm);
+  const candidates=preFiltered.slice(0,60);
+  let supDone=0;
+
+  for(let i=0;i<candidates.length;i+=5){
+    const batch=candidates.slice(i,i+5);
+    await Promise.all(batch.map(async r=>{
+      const cm=r.sym.match(/^(\d{6})\.(KS|KQ)$/);
+      if(cm){
+        try{
+          const ir=await fetch(`/investor/${cm[1]}`);
+          const id=await ir.json();
+          if(id&&id.days&&id.days.length)r.investor=id;
+        }catch(e){}
+      }
+      supDone++;
+      $('tpTxt').textContent=`2단계 수급 조회: ${supDone}/${candidates.length}`;
+    }));
+  }
+
+  // 최종 점수 계산
+  const scored=candidates.map(r=>{
+    const sc=calcPickScore(r,r.investor);
+    return{...r,...sc};
+  }).filter(r=>r.score>=4&&!r.warns.some(w=>w.includes('동반 순매도')));
+  scored.sort((a,b)=>b.score-a.score);
+  topPicksResults=scored.slice(0,15);
+
+  renderTopPicks();
+  $('tpProgress').hidden=true;
+  $('tpDateNote').textContent=fmtKrDateTime(new Date())+' 기준 | 한국 종목';
+  $('topPicksBtn').disabled=false;
+  document.querySelectorAll('.scan-btn').forEach(b=>b.disabled=false);
+  topPicksRunning=false;
+}
+
 async function runScan(mkt, pushHistory=true){
   if(scanRunning)return;
   scanMarket=mkt||scanMarket;
@@ -3039,10 +3284,12 @@ function renderScanTable(){
 $('scanBtn').addEventListener('click',()=>runScan('kr'));
 $('scanBtnUs').addEventListener('click',()=>runScan('us'));
 $('buyEntryBtn').addEventListener('click',()=>runBuyEntry());
+$('topPicksBtn').addEventListener('click',()=>runTopPicks());
 $('siteLogo').addEventListener('click',()=>{
   $('results').hidden=true;
   $('scanSection').hidden=true;
   $('buyEntrySection').hidden=true;
+  $('topPicksSection').hidden=true;
   $('loadingState').hidden=true;
   $('errorState').hidden=true;
   $('searchInput').value='';
@@ -3104,6 +3351,8 @@ window.addEventListener('popstate',e=>{
     runScan(mkt,false);
   }else if(p.has('entry')){
     runBuyEntry(false);
+  }else if(p.has('picks')){
+    runTopPicks(false);
   }else{
     history.replaceState({page:'home'},'',location.href);
   }
@@ -3118,6 +3367,7 @@ async function runAnalysis(query, pushHistory=true){
   $('results').hidden=true;
   $('scanSection').hidden=true;
   $('buyEntrySection').hidden=true;
+  $('topPicksSection').hidden=true;
   destroyCharts();
   try{
     const{res,ticker}=await fetchAny(query);
