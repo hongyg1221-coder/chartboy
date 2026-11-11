@@ -301,6 +301,9 @@ body{
       <button class="fbtn bull-f" data-f="bull">매수신호</button>
       <button class="fbtn bear-f" data-f="bear">매도신호</button>
       <button class="fbtn" data-f="neutral">중립</button>
+      <label style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#94a3b8;cursor:pointer;margin-left:8px;padding:4px 8px;border:1px solid #334155;border-radius:6px">
+        <input type="checkbox" id="filterMa240Scan" style="accent-color:#22c55e"> 240일선 위
+      </label>
     </div>
     <div class="scan-wrap">
       <table class="scan-table" id="scanTable">
@@ -336,6 +339,9 @@ body{
       <button class="fbtn" id="beFilterBreak" onclick="filterBuyEntry('broke')" style="color:var(--bull)">✅ 오늘 돌파</button>
       <button class="fbtn" id="beFilterNear" onclick="filterBuyEntry('near')" style="color:var(--warn)">📌 돌파 임박</button>
       <button class="fbtn" id="beFilterGap" onclick="filterBuyEntry('gap')" style="color:var(--bear)">⚠️ 갭상승주의</button>
+      <label style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#94a3b8;cursor:pointer;margin-left:8px;padding:4px 8px;border:1px solid #334155;border-radius:6px">
+        <input type="checkbox" id="filterMa240Be" style="accent-color:#22c55e"> 240일선 위
+      </label>
     </div>
     <div class="scan-wrap">
       <table class="scan-table" id="buyEntryTable">
@@ -2740,10 +2746,12 @@ function filterBuyEntry(f){
 }
 
 function renderBuyEntryTable(){
+  const ma240OnlyBe=$('filterMa240Be')&&$('filterMa240Be').checked;
   let rows=buyEntryResults.slice();
   if(beFilter==='broke')rows=rows.filter(r=>r.brokeToday);
   else if(beFilter==='near')rows=rows.filter(r=>!r.brokeToday&&!r.gapAbove);
   else if(beFilter==='gap')rows=rows.filter(r=>r.gapAbove);
+  if(ma240OnlyBe)rows=rows.filter(r=>r.aboveMa240!==false);
 
   if(!rows.length){
     $('buyEntryBody').innerHTML=`<tr><td colspan="9" class="scan-empty">해당 조건의 종목이 없습니다</td></tr>`;
@@ -2839,6 +2847,9 @@ async function runBuyEntry(){
         const maxS=analyses.length*3;
         const norm=(tot+maxS)/(maxS*2);
         const lv=be.levels[0];
+        const clBe=candles.map(c=>c.close);
+        const ma240vBe=clBe.length>=240?clBe.slice(-240).reduce((s,v)=>s+v,0)/240:null;
+        const aboveMa240Be=ma240vBe!=null?candles[candles.length-1].close>=ma240vBe:null;
         buyEntryResults.push({
           sym,name:s.n,market:s.m,
           price:be.cur,gapPct:be.gapPct,isGapUp:be.isGapUp,
@@ -2847,6 +2858,7 @@ async function runBuyEntry(){
           gapAbove:lv.gapAbove,
           dist:lv.dist,
           norm,
+          aboveMa240:aboveMa240Be,
         });
       }catch(e){}
       done++;
@@ -2949,6 +2961,9 @@ async function runScan(mkt, pushHistory=true){
         const maA=analyses.find(a=>a.title.includes('이동평균'));
         const macdA=analyses.find(a=>a.title.includes('MACD'));
         const rsiA=analyses.find(a=>a.title.includes('RSI'));
+        const cl2=candles.map(c=>c.close);
+        const ma240v2=cl2.length>=240?cl2.slice(-240).reduce((s,v)=>s+v,0)/240:null;
+        const aboveMa240=ma240v2!=null?last.close>=ma240v2:null;
         scanResults.push({
           sym,name:s.n,market:s.m,
           price:last.close,chg,
@@ -2957,6 +2972,7 @@ async function runScan(mkt, pushHistory=true){
           ma:maA?maA.signal:'neutral',
           macd:macdA?macdA.signal:'neutral',
           rsi:rsiA?rsiA.signal:'neutral',
+          aboveMa240,
         });
       }catch(e){}
       done++;
@@ -2978,13 +2994,14 @@ async function runScan(mkt, pushHistory=true){
 }
 
 function renderScanTable(){
+  const ma240Only=$('filterMa240Scan')&&$('filterMa240Scan').checked;
   const rows=scanResults
     .sort((a,b)=>b.norm-a.norm)
     .filter(r=>{
-      if(scanFilter==='all')return true;
-      if(scanFilter==='bull')return r.signal==='bull';
-      if(scanFilter==='bear')return r.signal==='bear';
-      if(scanFilter==='neutral')return r.signal==='neutral';
+      if(scanFilter==='bull'&&r.signal!=='bull')return false;
+      if(scanFilter==='bear'&&r.signal!=='bear')return false;
+      if(scanFilter==='neutral'&&r.signal!=='neutral')return false;
+      if(ma240Only&&r.aboveMa240===false)return false;
       return true;
     });
   if(!rows.length){
@@ -3025,6 +3042,10 @@ document.querySelectorAll('#filterRow .fbtn').forEach(btn=>{
     scanFilter=this.dataset.f;
     renderScanTable();
   });
+});
+document.addEventListener('change',e=>{
+  if(e.target.id==='filterMa240Scan')renderScanTable();
+  if(e.target.id==='filterMa240Be')renderBuyEntryTable();
 });
 
 // ── History API (뒤로가기 지원) ──────────────────────────────
