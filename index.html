@@ -2,6 +2,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.3/dist/lightweight-charts.standalone.production.js"></script>
 
 <style>
 :root {
@@ -366,8 +367,8 @@ body{
     <div class="stock-hd" id="stockHd"></div>
     <div class="overall" id="overall"></div>
     <div class="chart-sec">
-      <div class="chart-label">주가 차트 (60일) · MA5 · MA20 · MA60</div>
-      <div style="position:relative;height:240px"><canvas id="cPrice"></canvas></div>
+      <div class="chart-label">캔들차트 (60일) · MA5 · MA20 · MA60</div>
+      <div id="cPrice" style="height:300px"></div>
     </div>
     <div class="chart-sec">
       <div class="chart-label">거래량</div>
@@ -1823,7 +1824,15 @@ async function fetchAny(query){
 
 // ── 차트 렌더링 ────────────────────────────────────────────
 let charts={};
-const destroyCharts=()=>{Object.values(charts).forEach(c=>c?.destroy());charts={};};
+const destroyCharts=()=>{
+  Object.entries(charts).forEach(([k,c])=>{
+    if(!c)return;
+    if(typeof c.destroy==='function')c.destroy();       // Chart.js
+    else if(typeof c.remove==='function')c.remove();    // Lightweight Charts
+    else if(typeof c.disconnect==='function')c.disconnect(); // ResizeObserver
+  });
+  charts={};
+};
 
 const chartDefaults={
   responsive:true,maintainAspectRatio:false,animation:false,
@@ -1838,24 +1847,69 @@ const chartDefaults={
 
 function mkLabels(candles){return candles.map(c=>`${c.date.getMonth()+1}/${c.date.getDate()}`);}
 
+function fmtDate(d){
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
 function renderPrice(candles){
   const cl=candles.map(c=>c.close);
   const ma5a=sma(cl,5),ma20a=sma(cl,20),ma60a=sma(cl,60);
   const D=Math.min(60,candles.length),slice=candles.slice(-D);
   const off=candles.length-D;
-  charts.price=new Chart($('cPrice'),{
-    type:'line',
-    data:{labels:mkLabels(slice),datasets:[
-      {label:'종가',data:slice.map(c=>c.close),borderColor:'#94a3b8',
-       backgroundColor:'rgba(148,163,184,0.08)',borderWidth:1.5,pointRadius:0,fill:true,tension:0,order:4},
-      {label:'MA5',data:ma5a.slice(-D),borderColor:'#fbbf24',borderWidth:1.5,pointRadius:0,tension:0,order:3},
-      {label:'MA20',data:ma20a.slice(-D),borderColor:'#60a5fa',borderWidth:1.5,pointRadius:0,tension:0,order:2},
-      {label:'MA60',data:ma60a.slice(-D),borderColor:'#f472b6',borderWidth:1.5,pointRadius:0,tension:0,order:1},
-    ]},
-    options:{...chartDefaults,
-      plugins:{...chartDefaults.plugins,tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmt(c.raw)}`}}},
-      scales:{...chartDefaults.scales,y:{...chartDefaults.scales.y,ticks:{...chartDefaults.scales.y.ticks,callback:v=>fmt(v)}}}}
+
+  const container=$('cPrice');
+  container.innerHTML='';
+
+  const lwc=LightweightCharts.createChart(container,{
+    width:container.clientWidth,
+    height:300,
+    layout:{background:{color:'#111827'},textColor:'#94a3b8'},
+    grid:{vertLines:{color:'rgba(255,255,255,0.05)'},horzLines:{color:'rgba(255,255,255,0.05)'}},
+    crosshair:{mode:LightweightCharts.CrosshairMode.Normal},
+    rightPriceScale:{borderColor:'#2d3748',scaleMargins:{top:0.08,bottom:0.08}},
+    timeScale:{borderColor:'#2d3748',timeVisible:false},
+    handleScroll:true,handleScale:true,
   });
+
+  // 캔들 시리즈
+  const candleSeries=lwc.addCandlestickSeries({
+    upColor:'#22c55e',downColor:'#ef4444',
+    borderUpColor:'#22c55e',borderDownColor:'#ef4444',
+    wickUpColor:'#22c55e',wickDownColor:'#ef4444',
+  });
+
+  // 날짜 중복 제거 후 세팅
+  const seen=new Set();
+  const candleData=slice.reduce((acc,c)=>{
+    const t=fmtDate(c.date);
+    if(!seen.has(t)){seen.add(t);acc.push({time:t,open:c.open,high:c.high,low:c.low,close:c.close});}
+    return acc;
+  },[]);
+  candleSeries.setData(candleData);
+
+  // MA 라인
+  const addMA=(maArr,color,title)=>{
+    const s=lwc.addLineSeries({color,lineWidth:1.5,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false,title});
+    const maData=[];
+    const seen2=new Set();
+    slice.forEach((c,i)=>{
+      const v=maArr[off+i];
+      const t=fmtDate(c.date);
+      if(v!=null&&!seen2.has(t)){seen2.add(t);maData.push({time:t,value:v});}
+    });
+    s.setData(maData);
+  };
+  addMA(ma5a,'#fbbf24','MA5');
+  addMA(ma20a,'#60a5fa','MA20');
+  addMA(ma60a,'#f472b6','MA60');
+
+  lwc.timeScale().fitContent();
+  charts.lwcPrice=lwc;
+
+  // 반응형 리사이즈
+  const ro=new ResizeObserver(()=>lwc.applyOptions({width:container.clientWidth}));
+  ro.observe(container);
+  charts.lwcPriceRO=ro;
 }
 
 function renderVol(candles){
