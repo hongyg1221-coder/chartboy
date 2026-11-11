@@ -1878,27 +1878,35 @@ function mergeTodayQuote(candles, meta){
   const high=meta.regularMarketDayHigh;
   const low=meta.regularMarketDayLow;
   const vol=meta.regularMarketVolume;
-  const mktTime=meta.regularMarketTime; // Unix sec
-  if(!price||!open||!high||!low) return candles;
 
-  // 오늘 날짜를 로컬(KST) 기준으로 계산 — regularMarketTime UTC 변환 오차 방지
   const liveNow=new Date();
   const mktDay=new Date(liveNow.getFullYear(),liveNow.getMonth(),liveNow.getDate());
-
-  const todayCandle={
-    date:mktDay, open, high, low, close:price,
-    volume:vol||0, isLive:true,
-    liveTime:liveNow
-  };
+  // 한국 장 운영 시간 (09:00~15:30) — 로컬 시간 기준
+  const h=liveNow.getHours(), mn=liveNow.getMinutes();
+  const isMarketHours=h>=9&&(h<15||(h===15&&mn<=30));
 
   const result=[...candles];
   const last=result[result.length-1];
   const lastDay=new Date(last.date.getFullYear(),last.date.getMonth(),last.date.getDate());
 
-  if(lastDay.getTime()===mktDay.getTime()){
-    result[result.length-1]=todayCandle; // 오늘 봉 갱신
-  }else if(mktDay>lastDay){
-    result.push(todayCandle); // 오늘 봉 추가
+  if(price&&open&&high&&low){
+    // meta에 현재 시세가 있으면 오늘 봉 생성/갱신
+    const todayCandle={
+      date:mktDay, open, high, low, close:price,
+      volume:vol||0, isLive:isMarketHours,
+      liveTime:isMarketHours?liveNow:undefined
+    };
+    if(lastDay.getTime()===mktDay.getTime()){
+      result[result.length-1]=todayCandle;
+    }else if(mktDay>lastDay){
+      result.push(todayCandle);
+    }
+    return result;
+  }
+
+  // meta에 시세가 없어도 historical 마지막 봉이 오늘이고 장중이면 isLive 표시
+  if(lastDay.getTime()===mktDay.getTime()&&isMarketHours){
+    result[result.length-1]={...last, isLive:true, liveTime:liveNow};
   }
   return result;
 }
