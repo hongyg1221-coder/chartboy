@@ -131,10 +131,13 @@ class Handler(BaseHTTPRequestHandler):
 
         # 정적 파일 서빙
         else:
-            path = self.path.lstrip('/')
-            if not path or path == '/':
+            path = self.path.lstrip('/').split('?')[0]
+            if not path:
                 path = 'index.html'
-            path = path.split('?')[0]
+            # 존재하지 않는 경로는 SPA 폴백으로 index.html 반환
+            import os as _os
+            if not _os.path.isfile(path):
+                path = 'index.html'
             try:
                 with open(path, 'rb') as f:
                     content = f.read()
@@ -145,18 +148,9 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_header('Content-Type', f'{ct}; charset=utf-8')
                 self.end_headers()
                 self.wfile.write(content)
-            except FileNotFoundError:
-                # SPA 폴백: 존재하지 않는 경로는 index.html 반환
-                try:
-                    with open('index.html', 'rb') as f:
-                        content = f.read()
-                    self.send_response(200)
-                    self.send_header('Content-Type', 'text/html; charset=utf-8')
-                    self.end_headers()
-                    self.wfile.write(content)
-                except FileNotFoundError:
-                    self.send_response(404)
-                    self.end_headers()
+            except Exception:
+                self.send_response(404)
+                self.end_headers()
 
 if __name__ == '__main__':
     import sys
