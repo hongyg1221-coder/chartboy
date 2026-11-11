@@ -285,6 +285,7 @@ body{
       <button class="scan-btn" id="scanBtnUs" data-mkt="us">🇺🇸 미국 스캔</button>
       <button class="scan-btn" id="buyEntryBtn" data-mkt="entry" style="border-color:#f59e0b;color:#f59e0b">🎯 매수타점</button>
       <button class="scan-btn" id="topPicksBtn" data-mkt="picks" style="border-color:#a855f7;color:#a855f7">⭐ 오늘의 추천종목</button>
+      <button class="scan-btn" id="trackBtn" data-mkt="track" style="border-color:#38bdf8;color:#38bdf8">🗂️ 성과기록</button>
     </div>
   </header>
 
@@ -382,6 +383,21 @@ body{
           <tr><td colspan="7" class="scan-empty">⭐ 추천종목 버튼을 눌러주세요</td></tr>
         </tbody>
       </table>
+    </div>
+  </section>
+
+  <!-- 성과기록 섹션 -->
+  <section id="trackSection" hidden>
+    <div class="scan-hd">
+      <h2>🗂️ 추천종목 성과기록</h2>
+      <div style="font-size:12px;color:var(--dim);margin-left:4px">추천 당일 가격 → 현재 가격 · 수익률 추적</div>
+    </div>
+    <div id="trackSummary" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
+    <div id="trackLoading" style="font-size:13px;color:#94a3b8;padding:8px 0" hidden>현재 가격 조회 중...</div>
+    <div id="trackList"></div>
+    <div style="margin-top:16px;font-size:11px;color:#475569">
+      ※ 추천종목 스캔 완료 시 자동 저장 · 브라우저 로컬 저장 (기기별 보관)
+      <button onclick="clearTrackData()" style="margin-left:12px;font-size:11px;color:#ef4444;background:none;border:1px solid #ef4444;border-radius:4px;padding:1px 7px;cursor:pointer">기록 전체 삭제</button>
     </div>
   </section>
 
@@ -2839,6 +2855,8 @@ async function runBuyEntry(pushHistory=true){
 
   $('results').hidden=true;
   $('scanSection').hidden=true;
+  $('topPicksSection').hidden=true;
+  $('trackSection').hidden=true;
   $('buyEntrySection').hidden=false;
   $('beScanProgress').hidden=false;
   $('buyEntryBody').innerHTML=`<tr><td colspan="9" class="scan-empty">종목 목록 불러오는 중...</td></tr>`;
@@ -3023,7 +3041,7 @@ async function runTopPicks(pushHistory=true){
   if(pushHistory)history.pushState({page:'picks'},'','?picks=1');
 
   $('results').hidden=true;$('scanSection').hidden=true;
-  $('buyEntrySection').hidden=true;$('topPicksSection').hidden=false;
+  $('buyEntrySection').hidden=true;$('topPicksSection').hidden=false;$('trackSection').hidden=true;
   $('tpProgress').hidden=false;
   $('tpBody').innerHTML=`<tr><td colspan="7" class="scan-empty">분석 중...</td></tr>`;
   topPicksResults=[];
@@ -3132,6 +3150,28 @@ async function runTopPicks(pushHistory=true){
   renderTopPicks();
   $('tpProgress').hidden=true;
   $('tpDateNote').textContent=fmtKrDateTime(new Date())+' 기준 | 한국 종목';
+
+  // 성과기록 자동 저장
+  if(topPicksResults.length>0){
+    try{
+      const dateKey=new Date().toISOString().slice(0,10);
+      const saved=JSON.parse(localStorage.getItem('chartboy_picks')||'{}');
+      saved[dateKey]={
+        date:dateKey,
+        savedAt:new Date().toISOString(),
+        picks:topPicksResults.map(r=>({
+          sym:r.sym,
+          name:r.name,
+          price:r.close||0,
+          score:r.score,
+          reasons:r.reasons,
+          warns:r.warns
+        }))
+      };
+      localStorage.setItem('chartboy_picks',JSON.stringify(saved));
+    }catch(e){console.warn('성과기록 저장 실패',e);}
+  }
+
   $('topPicksBtn').disabled=false;
   document.querySelectorAll('.scan-btn').forEach(b=>b.disabled=false);
   topPicksRunning=false;
@@ -3153,6 +3193,8 @@ async function runScan(mkt, pushHistory=true){
   otherBtn.disabled=true;
   $('results').hidden=true;
   $('buyEntrySection').hidden=true;
+  $('topPicksSection').hidden=true;
+  $('trackSection').hidden=true;
   $('scanSection').hidden=false;
   $('scanProgress').hidden=false;
   $('filterRow').hidden=true;
@@ -3281,15 +3323,141 @@ function renderScanTable(){
   });
 }
 
+// ── 성과기록 ──────────────────────────────────────────────────
+function clearTrackData(){
+  if(!confirm('성과기록을 전부 삭제할까요? 되돌릴 수 없습니다.'))return;
+  localStorage.removeItem('chartboy_picks');
+  renderTrackList({});
+}
+
+async function runTrack(pushHistory=true){
+  if(pushHistory)history.pushState({page:'track'},'','?track=1');
+  $('results').hidden=true;
+  $('scanSection').hidden=true;
+  $('buyEntrySection').hidden=true;
+  $('topPicksSection').hidden=true;
+  $('trackSection').hidden=false;
+  window.scrollTo(0,0);
+
+  let saved={};
+  try{ saved=JSON.parse(localStorage.getItem('chartboy_picks')||'{}'); }catch(e){}
+
+  const dates=Object.keys(saved).sort().reverse();
+  if(dates.length===0){
+    $('trackList').innerHTML='<div style="color:#94a3b8;padding:20px 0">아직 기록이 없습니다. ⭐ 오늘의 추천종목을 먼저 실행해보세요.</div>';
+    $('trackSummary').innerHTML='';
+    return;
+  }
+
+  $('trackLoading').hidden=false;
+  $('trackList').innerHTML='';
+
+  // 현재가 조회 후 렌더링
+  const allPicks=[];
+  for(const d of dates){
+    for(const p of (saved[d].picks||[])) allPicks.push({...p,date:d});
+  }
+  const uniqSyms=[...new Set(allPicks.map(p=>p.sym))];
+  const priceMap={};
+  await Promise.all(uniqSyms.map(async sym=>{
+    try{
+      const q=await fetchYF(sym+'.KS','5d');
+      if(q){
+        const closes=q.indicators?.quote?.[0]?.close||[];
+        const last=closes.filter(Boolean).pop();
+        if(last) priceMap[sym]=last;
+      }
+    }catch(e){}
+  }));
+  $('trackLoading').hidden=true;
+
+  renderTrackList(saved, priceMap, dates);
+}
+
+function renderTrackList(saved, priceMap={}, dates=[]){
+  if(!dates.length) dates=Object.keys(saved).sort().reverse();
+  if(dates.length===0){
+    $('trackList').innerHTML='<div style="color:#94a3b8;padding:20px 0">아직 기록이 없습니다.</div>';
+    $('trackSummary').innerHTML='';
+    return;
+  }
+
+  let totalPicks=0, wins=0, loses=0, sumRet=0;
+
+  const html=dates.map(dateKey=>{
+    const entry=saved[dateKey];
+    const picks=entry.picks||[];
+    const rows=picks.map(p=>{
+      const cur=priceMap[p.sym];
+      const ret=cur&&p.price?(cur-p.price)/p.price*100:null;
+      let badge='';
+      if(ret!==null){
+        totalPicks++;
+        sumRet+=ret;
+        if(ret>=3){wins++;badge=`<span style="color:#22c55e;font-weight:600">✅ +${ret.toFixed(1)}%</span>`;}
+        else if(ret<=-3){loses++;badge=`<span style="color:#ef4444;font-weight:600">❌ ${ret.toFixed(1)}%</span>`;}
+        else{badge=`<span style="color:#f59e0b;font-weight:600">⚖️ ${ret>=0?'+':''}${ret.toFixed(1)}%</span>`;}
+      }else{
+        badge='<span style="color:#64748b">가격 조회 중...</span>';
+      }
+      const curDisp=cur?cur.toLocaleString():'—';
+      const entryDisp=p.price?p.price.toLocaleString():'—';
+      return `<tr>
+        <td style="font-weight:600;cursor:pointer;color:var(--acc)" onclick="runAnalysis('${p.sym}.KS')">${p.name||p.sym}</td>
+        <td style="color:#94a3b8">${p.sym}</td>
+        <td>${entryDisp}</td>
+        <td>${curDisp}</td>
+        <td>${badge}</td>
+        <td style="font-size:11px;color:#64748b;max-width:200px">${(p.reasons||[]).slice(0,3).join(' · ')}</td>
+      </tr>`;
+    }).join('');
+    return `<div style="margin-bottom:20px">
+      <div style="font-size:13px;font-weight:600;color:#cbd5e1;margin-bottom:6px;padding:4px 0;border-bottom:1px solid #1e293b">${dateKey} 추천 (${picks.length}종목)</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="color:#64748b;font-size:11px">
+          <th style="text-align:left;padding:4px 6px">종목명</th>
+          <th style="text-align:left;padding:4px 6px">코드</th>
+          <th style="text-align:right;padding:4px 6px">추천가</th>
+          <th style="text-align:right;padding:4px 6px">현재가</th>
+          <th style="text-align:right;padding:4px 6px">수익률</th>
+          <th style="text-align:left;padding:4px 6px">근거</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  }).join('');
+
+  $('trackList').innerHTML=html;
+
+  // 요약
+  const hitRate=totalPicks>0?(wins/totalPicks*100).toFixed(0):0;
+  const avgRet=totalPicks>0?(sumRet/totalPicks).toFixed(1):0;
+  $('trackSummary').innerHTML=`
+    <div style="background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:10px 16px;font-size:13px">
+      <span style="color:#94a3b8">총 추천</span> <strong>${totalPicks}</strong>종목
+    </div>
+    <div style="background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:10px 16px;font-size:13px">
+      <span style="color:#94a3b8">적중률(+3%↑)</span> <strong style="color:#22c55e">${hitRate}%</strong>
+    </div>
+    <div style="background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:10px 16px;font-size:13px">
+      <span style="color:#94a3b8">평균 수익률</span> <strong style="color:${Number(avgRet)>=0?'#22c55e':'#ef4444'}">${Number(avgRet)>=0?'+':''}${avgRet}%</strong>
+    </div>
+    <div style="background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:10px 16px;font-size:13px">
+      <span style="color:#94a3b8">추적 기간</span> <strong>${dates.length}일</strong>
+    </div>`;
+}
+
 $('scanBtn').addEventListener('click',()=>runScan('kr'));
 $('scanBtnUs').addEventListener('click',()=>runScan('us'));
 $('buyEntryBtn').addEventListener('click',()=>runBuyEntry());
 $('topPicksBtn').addEventListener('click',()=>runTopPicks());
+$('trackBtn').addEventListener('click',()=>runTrack());
 $('siteLogo').addEventListener('click',()=>{
   $('results').hidden=true;
   $('scanSection').hidden=true;
   $('buyEntrySection').hidden=true;
   $('topPicksSection').hidden=true;
+  $('trackSection').hidden=true;
   $('loadingState').hidden=true;
   $('errorState').hidden=true;
   $('searchInput').value='';
@@ -3339,6 +3507,7 @@ window.addEventListener('popstate',e=>{
     $('searchInput').value=s.query||'';
     runAnalysis(s.query,false);
   }
+  if(s.page==='track') runTrack(false);
 });
 
 // 초기 상태 설정 + URL 파라미터 처리 (새로고침 복원)
@@ -3353,6 +3522,8 @@ window.addEventListener('popstate',e=>{
     runBuyEntry(false);
   }else if(p.has('picks')){
     runTopPicks(false);
+  }else if(p.has('track')){
+    runTrack(false);
   }else{
     history.replaceState({page:'home'},'',location.href);
   }
@@ -3368,6 +3539,7 @@ async function runAnalysis(query, pushHistory=true){
   $('scanSection').hidden=true;
   $('buyEntrySection').hidden=true;
   $('topPicksSection').hidden=true;
+  $('trackSection').hidden=true;
   destroyCharts();
   try{
     const{res,ticker}=await fetchAny(query);
