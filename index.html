@@ -837,7 +837,7 @@ function analyzeCandleState(candles){
     else if(bodyRatio>0.7&&upperPct<5)typeKo='윗꼬리없는 장대양봉';
     else if(bodyRatio>0.7)typeKo='장대양봉';
     else if(lowerPct>40&&bodyRatio<0.35)typeKo='망치형 양봉';
-    else if(upperPct>40&&bodyRatio<0.35){typeKo='역망치형 양봉';typeClass='neutral';}
+    else if(upperPct>40&&bodyRatio<0.35){typeKo='뚜껑형 양봉(슈팅스타)';typeClass='bear';}
     else if(bodyRatio>0.4)typeKo='양봉';
     else typeKo='소양봉';
   }else{
@@ -959,7 +959,8 @@ function analyzeCandleState(candles){
     oparts.push(`장중 큰 폭으로 하락했다가 회복한 형태입니다. 하방 지지를 테스트하고 매수세가 받쳐준 신호로, 단기 반등 가능성이 있습니다. 다음 날 양봉으로 확인될 경우 반전 신호입니다.`);
     outlookClass='bull';
   }else if(typeKo.includes('뚜껑형')||typeKo.includes('슈팅스타')){
-    oparts.push(`장중 큰 폭으로 상승했다가 반락한 형태입니다. 고점에서 매물이 쏟아진 신호로, 단기 하락 가능성이 있습니다. 다음 날 음봉으로 확인될 경우 단기 고점 가능성이 높습니다.`);
+    const shootNote=typeKo.includes('양봉')?'양봉이지만 위꼬리가 길게 달린 형태로, 고점에서 매수세가 꺾였습니다.':'장중 큰 폭으로 상승했다가 반락한 형태입니다. 고점에서 매물이 쏟아진 신호입니다.';
+    oparts.push(`${shootNote} 단기 하락 가능성이 있습니다. 다음 날 음봉으로 확인될 경우 단기 고점 가능성이 높습니다.`);
     outlookClass='bear';
   }else if(typeKo.includes('도지')){
     // 도지 — 전일 종가·시가 대비 위치로 방향 편향 판단
@@ -1092,9 +1093,13 @@ function analyzeCandleState(candles){
   // 장중이면 oparts의 "마감" 표현을 현재형으로 일괄 치환
   if(isLiveCandle){
     const lr=s=>s
+      .replace(/다음 날 음봉으로 확인될 경우/g,'오늘 종가가 음봉이면')
+      .replace(/다음 날 양봉으로 확인될 경우/g,'오늘 종가가 양봉이면')
       .replace(/마감했습니다/g,'진행 중입니다')
+      .replace(/마감했으나/g,'흐름이지만 (장중)')
       .replace(/마감이지만/g,'흐름이지만 (장중)')
       .replace(/마감이며/g,'흐름이며 (장중)')
+      .replace(/마감이고/g,'흐름이고 (장중)')
       .replace(/마감해\s/g,'흐름으로 ')
       .replace(/종가로\s돌파했습니다/g,'돌파 중입니다 (장중)')
       .replace(/다음 날\s/g,'종가 확인 후 ')
