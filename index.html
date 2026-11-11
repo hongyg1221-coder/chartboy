@@ -774,6 +774,21 @@ function analyzeCandleState(candles){
   const slice=candles.slice(Math.max(0,n-21),n-1);
   const avgVol=slice.length?slice.reduce((s,x)=>s+x.volume,0)/slice.length:0;
   const volRatio=avgVol>0?c.volume/avgVol:1;
+  // 장중 부분 거래량 추정 (실시간 봉이면 경과 시간 비율로 하루 환산)
+  const isLiveCandle=!!c.isLive;
+  let projVolRatio=volRatio;
+  let liveTimeNote='';
+  if(isLiveCandle&&c.liveTime){
+    const t=c.liveTime;
+    const open9=new Date(t.getFullYear(),t.getMonth(),t.getDate(),9,0,0);
+    const elapsedMin=Math.max(1,(t-open9)/60000);
+    const totalMin=390; // KRX 9:00~15:30
+    const dayPct=Math.min(1,elapsedMin/totalMin);
+    projVolRatio=dayPct>0?volRatio/dayPct:volRatio; // 하루 종료 시 예상 배율
+    const hh=String(t.getHours()).padStart(2,'0');
+    const mm=String(t.getMinutes()).padStart(2,'0');
+    liveTimeNote=`${hh}:${mm} 기준`;
+  }
 
   // 이동평균선
   const ma5=candles.slice(Math.max(0,n-5),n).reduce((s,x)=>s+x.close,0)/Math.min(5,n);
@@ -854,7 +869,15 @@ function analyzeCandleState(candles){
     parts.push('아래꼬리가 거의 없이 저점 근처에서 마감했습니다. 하락 중 매수 세력 개입이 없어 하락 압력이 강합니다.');
   }
 
-  if(volRatio>2){
+  if(isLiveCandle){
+    const pv=(volRatio*100).toFixed(0);
+    const pj=projVolRatio.toFixed(1);
+    if(volRatio>1.5){
+      parts.push(`📡 ${liveTimeNote} 현재 거래량이 평균의 <strong>${pv}%</strong>로 이미 많습니다. 이 속도라면 장 종료 시 평균 대비 약 <strong>${pj}배</strong>로 예상됩니다. ${isBull?'거래량을 동반한 상승은 세력의 강한 매집 신호일 수 있습니다.':'거래량을 동반한 하락은 세력의 매도 신호일 수 있습니다.'}`);
+    }else{
+      parts.push(`📡 ${liveTimeNote} 현재 거래량은 평균의 ${pv}% 수준입니다. 장 종료 예상치 약 ${pj}배.`);
+    }
+  }else if(volRatio>2){
     parts.push(`거래량이 평균의 ${volRatio.toFixed(1)}배로 급증했습니다. ${isBull?'거래량을 동반한 상승은 세력의 강한 매집 신호일 수 있습니다.':'거래량을 동반한 하락은 세력의 매도 신호일 수 있습니다.'}`);
   }else if(volRatio<0.5){
     parts.push(`거래량이 평균의 ${(volRatio*100).toFixed(0)}% 수준으로 적습니다. 힘이 실리지 않은 움직임으로, 추세로 보기엔 근거가 약합니다.`);
@@ -1017,6 +1040,7 @@ function analyzeCandleState(candles){
   const outlookLabel=outlookClass==='bull'?'📈 단기 긍정 (상승 가능성)':outlookClass==='bear'?'📉 단기 주의 (하락 가능성)':'⚖️ 방향 불확실';
 
   return{typeKo,typeClass,isBull,change,bodyRatio,upperPct,lowerPct,volRatio,
+    projVolRatio,isLiveCandle,liveTimeNote,
     narrative:parts.join(' '),outlook:oparts.join(' '),outlookClass,outlookLabel};
 }
 
@@ -1125,7 +1149,7 @@ function renderCandleState(candles, investor){
   el.innerHTML=`
   <div class="candle-state-card">
     <div class="candle-state-header">
-      <span class="candle-state-type ${st.typeClass}">${st.isBull?'🟢':'🔴'} 오늘의 봉 — ${st.typeKo}</span>
+      <span class="candle-state-type ${st.typeClass}">${st.isBull?'🟢':'🔴'} 오늘의 봉 — ${st.typeKo}${st.isLiveCandle?` <span style="font-size:11px;background:rgba(96,165,250,.18);color:#60a5fa;padding:1px 7px;border-radius:10px;font-weight:600">📡 ${st.liveTimeNote}</span>`:''}</span>
       <span class="candle-state-change ${chClass}">${chSign}${st.change.toFixed(2)}%</span>
     </div>
     <div class="candle-state-bars">
@@ -1145,9 +1169,9 @@ function renderCandleState(candles, investor){
         <span class="candle-bar-val">${st.lowerPct.toFixed(0)}%</span>
       </div>
       <div class="candle-bar-item">
-        <span class="candle-bar-label">거래량 (평균 대비)</span>
+        <span class="candle-bar-label">${st.isLiveCandle?`거래량 (현재/${st.liveTimeNote})`:'거래량 (평균 대비)'}</span>
         <div class="candle-bar-track"><div class="candle-bar-fill neutral" style="width:${Math.min(100,st.volRatio*50).toFixed(0)}%"></div></div>
-        <span class="candle-bar-val">${st.volRatio.toFixed(1)}배</span>
+        <span class="candle-bar-val">${st.volRatio.toFixed(1)}배${st.isLiveCandle?` → 종가 예상 ${st.projVolRatio.toFixed(1)}배`:''}</span>
       </div>
     </div>
     <div class="candle-state-narrative">${st.narrative}</div>
@@ -1729,6 +1753,38 @@ function parseCandles(res){
         low:q.low[i],close:q.close[i],volume:q.volume[i]||0});
   }
   return out;
+}
+
+// 실시간 오늘 봉 병합 — meta의 현재 시세로 오늘 캔들을 추가/덮어쓴다
+function mergeTodayQuote(candles, meta){
+  if(!meta) return candles;
+  const price=meta.regularMarketPrice;
+  const open=meta.regularMarketOpen;
+  const high=meta.regularMarketDayHigh;
+  const low=meta.regularMarketDayLow;
+  const vol=meta.regularMarketVolume;
+  const mktTime=meta.regularMarketTime; // Unix sec
+  if(!price||!open||!high||!low) return candles;
+
+  const mktDate=new Date((mktTime||Date.now()/1000)*1000);
+  const mktDay=new Date(mktDate.getFullYear(),mktDate.getMonth(),mktDate.getDate());
+
+  const todayCandle={
+    date:mktDay, open, high, low, close:price,
+    volume:vol||0, isLive:true,
+    liveTime:new Date() // 분석 시각
+  };
+
+  const result=[...candles];
+  const last=result[result.length-1];
+  const lastDay=new Date(last.date.getFullYear(),last.date.getMonth(),last.date.getDate());
+
+  if(lastDay.getTime()===mktDay.getTime()){
+    result[result.length-1]=todayCandle; // 오늘 봉 갱신
+  }else if(mktDay>lastDay){
+    result.push(todayCandle); // 오늘 봉 추가
+  }
+  return result;
 }
 
 function resolveTickers(q){
@@ -2706,7 +2762,7 @@ async function runAnalysis(query, pushHistory=true){
   destroyCharts();
   try{
     const{res,ticker}=await fetchAny(query);
-    const candles=parseCandles(res);
+    const candles=mergeTodayQuote(parseCandles(res),res.meta);
     if(candles.length<30)throw new Error('데이터가 너무 적습니다 (최소 30일)');
     const analyses=runAll(candles);
     renderHeader(res.meta,candles);
@@ -2728,8 +2784,12 @@ async function runAnalysis(query, pushHistory=true){
     renderVol(candles);
     renderMacd(candles);
     renderRsi(candles);
-    const last=candles[candles.length-1].date;
-    $('dataNote').textContent=`기준일: ${last.toLocaleDateString('ko-KR')} | 출처: Yahoo Finance (${ticker})`;
+    const lastC=candles[candles.length-1];
+    const isLive=!!lastC.isLive;
+    const nowStr=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+    $('dataNote').textContent=isLive
+      ?`📡 실시간 (${nowStr} 기준) ${lastC.date.toLocaleDateString('ko-KR')} | 출처: Yahoo Finance (${ticker})`
+      :`기준일: ${lastC.date.toLocaleDateString('ko-KR')} | 출처: Yahoo Finance (${ticker})`;
   }catch(e){
     $('errorMsg').textContent=`로드 실패: ${e.message}`;
     $('errorState').hidden=false;
