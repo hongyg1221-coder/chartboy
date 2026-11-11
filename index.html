@@ -2794,8 +2794,9 @@ function renderBuyEntryTable(){
   });
 }
 
-async function runBuyEntry(){
+async function runBuyEntry(pushHistory=true){
   if(buyEntryRunning)return;
+  if(pushHistory) history.pushState({page:'entry'},'','?entry=1');
   buyEntryRunning=true;
   buyEntryResults=[];
   beFilter='all';
@@ -2894,7 +2895,7 @@ async function runBuyEntry(){
 async function runScan(mkt, pushHistory=true){
   if(scanRunning)return;
   scanMarket=mkt||scanMarket;
-  if(pushHistory===true) history.pushState({page:'scan'}, '', '?scan=1');
+  if(pushHistory===true) history.pushState({page:'scan',mkt:scanMarket}, '', `?scan=${scanMarket}`);
   scanRunning=true;
   scanResults=[];
   // 버튼 상태 업데이트
@@ -3093,11 +3094,19 @@ window.addEventListener('popstate',e=>{
   }
 });
 
-// 초기 상태 설정 + URL 파라미터 처리
-history.replaceState({page:'home'},'',location.href);
+// 초기 상태 설정 + URL 파라미터 처리 (새로고침 복원)
 (()=>{
   const p=new URLSearchParams(location.search);
-  if(p.has('q')) runAnalysis(decodeURIComponent(p.get('q')),false);
+  if(p.has('q')){
+    runAnalysis(decodeURIComponent(p.get('q')),false);
+  }else if(p.has('scan')){
+    const mkt=p.get('scan')==='us'?'us':'kr';
+    runScan(mkt,false);
+  }else if(p.has('entry')){
+    runBuyEntry(false);
+  }else{
+    history.replaceState({page:'home'},'',location.href);
+  }
 })();
 
 // ── 메인 실행 ──────────────────────────────────────────────

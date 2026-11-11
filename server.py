@@ -146,8 +146,17 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(content)
             except FileNotFoundError:
-                self.send_response(404)
-                self.end_headers()
+                # SPA 폴백: 존재하지 않는 경로는 index.html 반환
+                try:
+                    with open('index.html', 'rb') as f:
+                        content = f.read()
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'text/html; charset=utf-8')
+                    self.end_headers()
+                    self.wfile.write(content)
+                except FileNotFoundError:
+                    self.send_response(404)
+                    self.end_headers()
 
 if __name__ == '__main__':
     import sys
