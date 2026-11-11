@@ -388,10 +388,14 @@ body{
 
   <!-- 성과기록 섹션 -->
   <section id="trackSection" hidden>
-    <div class="scan-hd">
-      <h2>🗂️ 추천종목 성과기록</h2>
-      <div style="font-size:12px;color:var(--dim);margin-left:4px">추천 당일 가격 → 현재 가격 · 수익률 추적</div>
+    <div class="scan-hd" style="display:flex;align-items:center;flex-wrap:wrap;gap:10px">
+      <div>
+        <h2>🗂️ 추천종목 성과기록</h2>
+        <div style="font-size:12px;color:var(--dim);margin-left:4px">추천 당일 가격 → 현재 가격 · 수익률 추적</div>
+      </div>
+      <button id="backtestBtn" onclick="runBacktest()" style="margin-left:auto;font-size:12px;background:none;border:1px solid #38bdf8;color:#38bdf8;border-radius:6px;padding:5px 12px;cursor:pointer">📊 지난 1주일 백테스트 채우기</button>
     </div>
+    <div id="backtestProgress" hidden style="font-size:12px;color:#94a3b8;padding:6px 0;margin-bottom:4px"></div>
     <div id="trackSummary" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
     <div id="trackLoading" style="font-size:13px;color:#94a3b8;padding:8px 0" hidden>현재 가격 조회 중...</div>
     <div id="trackList"></div>
@@ -3162,7 +3166,7 @@ async function runTopPicks(pushHistory=true){
         picks:topPicksResults.map(r=>({
           sym:r.sym,
           name:r.name,
-          price:r.close||0,
+          price:r.price||0,
           score:r.score,
           reasons:r.reasons,
           warns:r.warns
@@ -3330,6 +3334,93 @@ function clearTrackData(){
   renderTrackList({});
 }
 
+// 지난 거래일 N개 날짜 계산 (주말 제외, YYYY-MM-DD)
+function getPastTradingDays(n){
+  const days=[];
+  const d=new Date();
+  d.setHours(0,0,0,0);
+  while(days.length<n){
+    d.setDate(d.getDate()-1);
+    const dow=d.getDay();
+    if(dow!==0&&dow!==6) days.push(d.toISOString().slice(0,10));
+  }
+  return days; // 최근순
+}
+
+async function runBacktest(){
+  if(!topPicksResults||!topPicksResults.length){
+    alert('먼저 ⭐ 오늘의 추천종목을 실행해서 종목을 선별해주세요.');
+    return;
+  }
+  const btn=$('backtestBtn');
+  const prog=$('backtestProgress');
+  btn.disabled=true;
+  prog.hidden=false;
+  prog.textContent='백테스트 준비 중...';
+
+  const tradingDays=getPastTradingDays(5); // 최근 5거래일 (어제~5일 전)
+
+  // 각 종목의 최근 2주 종가 데이터 로드
+  const symPriceMap={}; // sym → {date: price}
+  let done=0;
+  const total=topPicksResults.length;
+
+  await Promise.all(topPicksResults.map(async r=>{
+    try{
+      const q=await fetchYF(r.sym,'1mo');
+      if(!q)return;
+      const times=q.timestamp||[];
+      const closes=q.indicators?.quote?.[0]?.close||[];
+      times.forEach((ts,i)=>{
+        const dateStr=new Date(ts*1000).toISOString().slice(0,10);
+        if(closes[i]!=null) {
+          if(!symPriceMap[r.sym]) symPriceMap[r.sym]={};
+          symPriceMap[r.sym][dateStr]=closes[i];
+        }
+      });
+    }catch(e){}
+    done++;
+    prog.textContent=`가격 데이터 조회 중... ${done}/${total}`;
+  }));
+
+  // 날짜별로 localStorage에 저장
+  let saved={};
+  try{ saved=JSON.parse(localStorage.getItem('chartboy_picks')||'{}'); }catch(e){}
+
+  let savedCount=0;
+  for(const dateKey of tradingDays){
+    const picks=[];
+    for(const r of topPicksResults){
+      const price=(symPriceMap[r.sym]||{})[dateKey];
+      if(!price)continue; // 그 날 데이터 없으면 스킵
+      picks.push({
+        sym:r.sym,
+        name:r.name,
+        price,
+        score:r.score,
+        reasons:r.reasons,
+        warns:r.warns
+      });
+    }
+    if(picks.length>0){
+      // 이미 그 날 기록이 있으면 덮어쓰지 않음 (실제 추천 데이터 보존)
+      if(!saved[dateKey]){
+        saved[dateKey]={date:dateKey,savedAt:new Date().toISOString(),backtest:true,picks};
+        savedCount++;
+      }
+    }
+  }
+
+  try{ localStorage.setItem('chartboy_picks',JSON.stringify(saved)); }catch(e){}
+
+  btn.disabled=false;
+  prog.textContent=`✅ ${savedCount}일치 백테스트 데이터 추가 완료 (기존 기록은 유지)`;
+  setTimeout(()=>{ prog.hidden=true; },3000);
+
+  // 현재 가격 조회 후 재렌더링
+  await runTrack(false);
+}
+
 async function runTrack(pushHistory=true){
   if(pushHistory)history.pushState({page:'track'},'','?track=1');
   $('results').hidden=true;
@@ -3412,7 +3503,7 @@ function renderTrackList(saved, priceMap={}, dates=[]){
       </tr>`;
     }).join('');
     return `<div style="margin-bottom:20px">
-      <div style="font-size:13px;font-weight:600;color:#cbd5e1;margin-bottom:6px;padding:4px 0;border-bottom:1px solid #1e293b">${dateKey} 추천 (${picks.length}종목)</div>
+      <div style="font-size:13px;font-weight:600;color:#cbd5e1;margin-bottom:6px;padding:4px 0;border-bottom:1px solid #1e293b">${dateKey} ${entry.backtest?'<span style="font-size:10px;color:#38bdf8;border:1px solid #38bdf8;border-radius:3px;padding:0 4px;margin-left:4px">백테스트</span>':'추천'} (${picks.length}종목)</div>
       <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead><tr style="color:#64748b;font-size:11px">
           <th style="text-align:left;padding:4px 6px">종목명</th>
