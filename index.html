@@ -1251,7 +1251,8 @@ function renderCandleState(candles, investor){
     }
 
     // 위꼬리 패턴 종합 판단 (전일 고점 대비 체크)
-    if(st.upperPct>35&&nC>=2){
+    if(st.upperPct>35&&candles.length>=2){
+      const nC=candles.length;
       const cC=candles[nC-1], pC=candles[nC-2];
       const gapPct2=(cC.open-pC.close)/pC.close*100;
       const gapUp2=gapPct2>0.5;
