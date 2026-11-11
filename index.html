@@ -902,13 +902,24 @@ function analyzeCandleState(candles){
     parts.push(`거래량이 평균의 ${(volRatio*100).toFixed(0)}% 수준으로 적습니다. 힘이 실리지 않은 움직임으로, 추세로 보기엔 근거가 약합니다.`);
   }
 
-  // 전일 대비 비교
+  // 전일 대비 비교 — 장악형 감지
   const prevBull=p.close>=p.open;
   const prevBody=Math.abs(p.close-p.open);
-  if(!isBull&&prevBull&&body>prevBody*1.3){
-    parts.push('전일 양봉을 오늘 음봉이 완전히 덮는 하락 장악형입니다. 단기 추세 전환 주의가 필요합니다.');
+  const isBearEngulf=!isBull&&prevBull&&c.open>=p.close&&c.close<=p.open;
+  const isBullEngulf=isBull&&!prevBull&&c.open<=p.close&&c.close>=p.open;
+  if(isBearEngulf){
+    const afterRise=prevDir>0&&prevStreak>=2;
+    const riseNote=afterRise?`<strong>${prevStreak}일 연속 상승 후</strong> 나온 패턴으로, 단기 고점에서 세력이 물량을 던지는 신호일 가능성이 높습니다.`:'단기 추세 전환 주의가 필요합니다.';
+    parts.push(`전일 양봉을 오늘 음봉이 완전히 덮는 <strong>하락 장악형</strong>입니다. ${riseNote}`);
+  }else if(!isBull&&prevBull&&body>prevBody*1.3){
+    parts.push('전일 양봉보다 큰 음봉이 나왔습니다. 하락 압력이 강해지고 있습니다.');
+  }
+  if(isBullEngulf){
+    const afterFall=prevDir<0&&prevStreak>=2;
+    const fallNote=afterFall?`<strong>${prevStreak}일 연속 하락 후</strong> 나온 패턴으로, 단기 저점 반전 가능성이 있습니다.`:'단기 반전 신호로 볼 수 있습니다.';
+    parts.push(`전일 음봉을 오늘 양봉이 완전히 덮는 <strong>상승 장악형</strong>입니다. ${fallNote}`);
   }else if(isBull&&!prevBull&&body>prevBody*1.3){
-    parts.push('전일 음봉을 오늘 양봉이 완전히 덮는 상승 장악형입니다. 반전 신호로 볼 수 있습니다.');
+    parts.push('전일 음봉보다 큰 양봉이 나왔습니다. 매수 세력이 강하게 반격하고 있습니다.');
   }
 
   // 갭 여부
@@ -1039,6 +1050,26 @@ function analyzeCandleState(candles){
   // 가짜 돌파 경고 — 갭 상승 출발로 저항선을 넘은 경우
   if(gapUp&&isBull&&gapPct>1.5){
     oparts.push(`⚠️ <strong>가짜 돌파 주의:</strong> 오늘 갭 상승(+${gapPct.toFixed(1)}%)으로 출발했습니다. 저항선·매수타점을 장중 매수 압력이 아닌 갭으로 뛰어넘은 경우, 의미 있는 돌파로 보기 어렵습니다. 매수타점이 오늘 시가보다 낮았다면 진짜 돌파가 아닙니다.`);
+  }
+
+  // 하락 장악형 행동 지침
+  if(isBearEngulf){
+    const prevOpenFmt3=Math.round(p.open).toLocaleString();
+    const cancelNote=isLiveCandle
+      ?`오늘 종가가 전일 시가(${prevOpenFmt3}) 위로 회복하면 패턴이 취소되므로, 장 마감까지 지켜봐야 합니다.`
+      :`종가가 전일 시가(${prevOpenFmt3}) 아래에서 확정됐으므로 패턴이 성립합니다.`;
+    oparts.push(`📋 <strong>행동 지침:</strong> ① 보유 중이라면 일부 또는 전량 익절을 검토하세요. ② 미보유 상태라면 ${isLiveCandle?'오늘 종가 확인 전까지':'당분간'} 신규 진입을 자제하세요. ${cancelNote}`);
+    outlookClass='bear';
+  }
+
+  // 상승 장악형 행동 지침
+  if(isBullEngulf){
+    const prevOpenFmt4=Math.round(p.open).toLocaleString();
+    const cancelNote2=isLiveCandle
+      ?`오늘 종가가 전일 시가(${prevOpenFmt4}) 아래로 내려오면 패턴이 취소되므로, 장 마감까지 지켜봐야 합니다.`
+      :`종가가 전일 시가(${prevOpenFmt4}) 위에서 확정됐으므로 패턴이 성립합니다.`;
+    oparts.push(`📋 <strong>행동 지침:</strong> ① 보유 중 손실이면 추가 매수(물타기)보다 반등 확인 후 대응을 권장합니다. ② 미보유 상태라면 ${isLiveCandle?'오늘 종가 확인 후':'내일'} 5일선(${Math.round(ma5).toLocaleString()}) 위 유지 여부를 확인하고 진입을 검토하세요. ${cancelNote2}`);
+    outlookClass='bull';
   }
 
   // 이동평균선 맥락 + 핵심 관찰 가격
