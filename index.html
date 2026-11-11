@@ -290,6 +290,7 @@ body{
   <section id="scanSection" hidden>
     <div class="scan-hd">
       <h2 id="scanTitle">종목 종합 순위</h2>
+      <div id="scanDateNote" style="font-size:11px;color:#94a3b8;margin-top:2px"></div>
       <div class="scan-progress" id="scanProgress" hidden>
         <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
         <div class="prog-txt" id="progTxt">준비 중...</div>
@@ -321,6 +322,7 @@ body{
   <section id="buyEntrySection" hidden>
     <div class="scan-hd">
       <h2>🎯 오늘의 매수타점 — 차트보이 방식</h2>
+      <div id="beDateNote" style="font-size:11px;color:#94a3b8;margin-top:2px"></div>
       <div style="font-size:12px;color:var(--dim);margin-left:4px">
         240일선·구름대·전고점·주봉20선 돌파 직전 종목 / 갭상승(가짜돌파) 경고 포함
       </div>
@@ -1781,13 +1783,14 @@ function mergeTodayQuote(candles, meta){
   const mktTime=meta.regularMarketTime; // Unix sec
   if(!price||!open||!high||!low) return candles;
 
-  const mktDate=new Date((mktTime||Date.now()/1000)*1000);
-  const mktDay=new Date(mktDate.getFullYear(),mktDate.getMonth(),mktDate.getDate());
+  // 오늘 날짜를 로컬(KST) 기준으로 계산 — regularMarketTime UTC 변환 오차 방지
+  const liveNow=new Date();
+  const mktDay=new Date(liveNow.getFullYear(),liveNow.getMonth(),liveNow.getDate());
 
   const todayCandle={
     date:mktDay, open, high, low, close:price,
     volume:vol||0, isLive:true,
-    liveTime:new Date() // 분석 시각
+    liveTime:liveNow
   };
 
   const result=[...candles];
@@ -1864,6 +1867,11 @@ function mkLabels(candles){return candles.map(c=>`${c.date.getMonth()+1}/${c.dat
 function fmtDate(d){
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
+function fmtKrDateTime(d){
+  const yyyy=d.getFullYear(),mm=d.getMonth()+1,dd=d.getDate();
+  const hh=String(d.getHours()).padStart(2,'0'),min=String(d.getMinutes()).padStart(2,'0');
+  return `${yyyy}년 ${mm}월 ${dd}일 ${hh}:${min}`;
+}
 
 function renderPrice(candles){
   const cl=candles.map(c=>c.close);
@@ -1881,7 +1889,7 @@ function renderPrice(candles){
     grid:{vertLines:{color:'rgba(255,255,255,0.05)'},horzLines:{color:'rgba(255,255,255,0.05)'}},
     crosshair:{mode:LightweightCharts.CrosshairMode.Normal},
     rightPriceScale:{borderColor:'#2d3748',scaleMargins:{top:0.08,bottom:0.08}},
-    timeScale:{borderColor:'#2d3748',timeVisible:false},
+    timeScale:{borderColor:'#2d3748',timeVisible:true,tickMarkFormatter:(t)=>{const d=new Date(t);return`${d.getMonth()+1}/${d.getDate()}`;}},
     handleScroll:true,handleScale:true,
   });
 
@@ -2641,6 +2649,7 @@ async function runBuyEntry(){
   }
 
   $('beProgTxt').textContent=`완료: ${buyEntryResults.length}개 매수타점 종목 발견 (전체 ${total}개 중)`;
+  $('beDateNote').textContent=fmtKrDateTime(new Date())+' 기준';
   $('buyEntryBtn').textContent='🎯 매수타점';
   $('buyEntryBtn').disabled=false;
   $('buyEntryBtn').style.borderColor='#f59e0b';
@@ -2741,6 +2750,7 @@ async function runScan(mkt, pushHistory=true){
   scanResults.sort((a,b)=>b.norm-a.norm);
   renderScanTable();
   $('progTxt').textContent=`완료: ${total}개 종목 분석`;
+  $('scanDateNote').textContent=fmtKrDateTime(new Date())+' 기준';
   $('filterRow').hidden=false;
   const btnLabel=scanMarket==='us'?'🇺🇸 미국 스캔':'🇰🇷 한국 스캔';
   btn.textContent=btnLabel;btn.disabled=false;
@@ -2872,10 +2882,12 @@ async function runAnalysis(query, pushHistory=true){
     renderRsi(candles);
     const lastC=candles[candles.length-1];
     const isLive=!!lastC.isLive;
-    const nowStr=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+    const analysisTime=new Date();
+    const dateStr=`${lastC.date.getFullYear()}년 ${lastC.date.getMonth()+1}월 ${lastC.date.getDate()}일`;
+    const timeStr=`${String(analysisTime.getHours()).padStart(2,'0')}:${String(analysisTime.getMinutes()).padStart(2,'0')}`;
     $('dataNote').textContent=isLive
-      ?`📡 실시간 (${nowStr} 기준) ${lastC.date.toLocaleDateString('ko-KR')} | 출처: Yahoo Finance (${ticker})`
-      :`기준일: ${lastC.date.toLocaleDateString('ko-KR')} | 출처: Yahoo Finance (${ticker})`;
+      ?`📡 실시간 | ${dateStr} ${timeStr} 기준 | Yahoo Finance (${ticker})`
+      :`기준일: ${dateStr} (전일 종가) | Yahoo Finance (${ticker})`;
   }catch(e){
     $('errorMsg').textContent=`로드 실패: ${e.message}`;
     $('errorState').hidden=false;
