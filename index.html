@@ -392,6 +392,17 @@ body{
 
 <script>
 // ── 종목 DB ──────────────────────────────────────────────
+let extraStocks=[];
+(async()=>{
+  try{
+    const r=await fetch('/stocks');
+    const d=await r.json();
+    const kr=(d.kr||[]).map(s=>({c:s.symbol.replace(/\.(KS|KQ)$/,''),n:s.name,m:s.symbol.endsWith('.KQ')?'KQ':'KS',sym:s.symbol}));
+    const us=(d.us||[]).map(s=>({c:s.symbol,n:s.name,m:'US',sym:s.symbol}));
+    extraStocks=[...kr,...us];
+  }catch(e){}
+})();
+
 const STOCKS=[
   {c:'^KS11',n:'코스피 지수',m:'IDX',sym:'^KS11'},{c:'^KQ11',n:'코스닥 지수',m:'IDX',sym:'^KQ11'},
   {c:'^GSPC',n:'S&P 500',m:'IDX',sym:'^GSPC'},{c:'^IXIC',n:'나스닥 지수',m:'IDX',sym:'^IXIC'},
@@ -1920,7 +1931,8 @@ function resolveTickers(q){
   if(t.endsWith('.KS')||t.endsWith('.KQ'))return[t];
   if(/^\d{6}$/.test(t))return[`${t}.KS`,`${t}.KQ`];
   const tl=t.toLowerCase();
-  const m=STOCKS.find(s=>s.n.toLowerCase()===tl||s.n.includes(t)||s.c===t);
+  const all=[...STOCKS,...extraStocks];
+  const m=all.find(s=>s.n.toLowerCase()===tl||s.n.includes(t)||s.c===t);
   if(m)return[m.sym||`${m.c}.${m.m}`];
   return[t,`${t}.KS`,`${t}.KQ`];
 }
