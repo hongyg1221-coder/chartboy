@@ -858,32 +858,34 @@ function analyzeCandleState(candles){
   if(prevStreak>=2){
     const trendWord=prevDir>0?'상승':'하락';
     const pct=chg5!==null?` (최근 5일 ${chg5>=0?'+':''}${chg5.toFixed(1)}%)`:'';
-    parts.push(`직전 <strong>${prevStreak}일 연속 ${trendWord}</strong>${pct} 후 오늘 ${isBull?'양봉':'음봉'}으로 나왔습니다.`);
+    const candleVerb=isLiveCandle?(isBull?'양봉 흐름 (장중)':'음봉 흐름 (장중)'):(isBull?'양봉 마감':'음봉 마감');
+    parts.push(`직전 <strong>${prevStreak}일 연속 ${trendWord}</strong>${pct} 후 오늘 ${candleVerb}입니다.`);
   }else if(chg5!==null){
-    parts.push(`최근 5일간 ${chg5>=0?'+':''}${chg5.toFixed(1)}% 변동한 상황에서 오늘은 <strong>${typeKo}</strong>이 나왔습니다.`);
+    const candleNote=isLiveCandle?` (장중 현재 <strong>${typeKo}</strong>)`:``;
+    parts.push(`최근 5일간 ${chg5>=0?'+':''}${chg5.toFixed(1)}% 변동한 상황에서 오늘은 <strong>${typeKo}</strong>${isLiveCandle?' 흐름입니다 (장중)':'이 나왔습니다.'}`);
   }else{
-    parts.push(`오늘은 <strong>${typeKo}</strong>이 나왔습니다.`);
+    parts.push(`오늘은 <strong>${typeKo}</strong>${isLiveCandle?' 흐름입니다 (장중)':'이 나왔습니다.'}`);
   }
 
   if(isBull){
-    if(bodyRatio>0.7)parts.push('시가부터 종가까지 강하게 밀어올린 형태로, 매수 세력이 압도적으로 우위였습니다.');
-    else parts.push('장중 등락이 있었지만 결국 양봉으로 마감했습니다.');
+    if(bodyRatio>0.7)parts.push(isLiveCandle?'시가부터 현재까지 강하게 밀어올리는 흐름으로, 매수 세력이 우위입니다.':'시가부터 종가까지 강하게 밀어올린 형태로, 매수 세력이 압도적으로 우위였습니다.');
+    else parts.push(isLiveCandle?'현재까지 등락이 있었지만 양봉 흐름을 유지하고 있습니다. 장 마감까지 흐름을 지켜봐야 합니다.':'장중 등락이 있었지만 결국 양봉으로 마감했습니다.');
   }else{
-    if(bodyRatio>0.7)parts.push('시가부터 종가까지 계속 밀린 형태로, 매도 압력이 강하게 작용했습니다.');
-    else parts.push('장중 등락이 있었지만 결국 음봉으로 마감했습니다.');
+    if(bodyRatio>0.7)parts.push(isLiveCandle?'시가부터 현재까지 계속 밀리는 흐름으로, 매도 압력이 강합니다.':'시가부터 종가까지 계속 밀린 형태로, 매도 압력이 강하게 작용했습니다.');
+    else parts.push(isLiveCandle?'현재까지 등락이 있었지만 음봉 흐름입니다. 아직 장 마감까지 시간이 남아 있어 최종 종가를 확인해야 합니다.':'장중 등락이 있었지만 결국 음봉으로 마감했습니다.');
   }
 
   if(upperPct>35){
     if(isBull)parts.push(`위꼬리가 ${upperPct.toFixed(0)}% 비율로 길게 달렸습니다. 고점에서 매물이 쏟아져 추가 상승에 저항이 있다는 의미입니다.`);
     else parts.push(`위꼬리가 ${upperPct.toFixed(0)}% 달렸지만 고점을 지키지 못하고 밀렸습니다. 위에 매물대가 강합니다.`);
   }else if(upperPct<5&&isBull){
-    parts.push('위꼬리가 거의 없이 고점 근처에서 종가를 형성했습니다. 매수세가 끝까지 강했다는 의미입니다.');
+    parts.push(isLiveCandle?'위꼬리가 거의 없이 고점 근처에서 현재 가격이 형성되고 있습니다. 매수세가 강한 흐름입니다.':'위꼬리가 거의 없이 고점 근처에서 종가를 형성했습니다. 매수세가 끝까지 강했다는 의미입니다.');
   }
 
   if(lowerPct>35){
     parts.push(`아래꼬리가 ${lowerPct.toFixed(0)}% 비율로 길게 달렸습니다. 장중 저점에서 매수 세력이 받쳐줬다는 뜻으로, 하방 지지력이 있습니다.`);
   }else if(lowerPct<5&&!isBull&&bodyRatio>0.6){
-    parts.push('아래꼬리가 거의 없이 저점 근처에서 마감했습니다. 하락 중 매수 세력 개입이 없어 하락 압력이 강합니다.');
+    parts.push(isLiveCandle?'아래꼬리가 거의 없이 저점 근처에서 현재 가격이 형성되고 있습니다. 하락 압력이 강한 흐름입니다.':'아래꼬리가 거의 없이 저점 근처에서 마감했습니다. 하락 중 매수 세력 개입이 없어 하락 압력이 강합니다.');
   }
 
   if(isLiveCandle){
@@ -1055,6 +1057,19 @@ function analyzeCandleState(candles){
   if(oparts.length) oparts.push(maParts.join(' '));
 
   const outlookLabel=outlookClass==='bull'?'📈 단기 긍정 (상승 가능성)':outlookClass==='bear'?'📉 단기 주의 (하락 가능성)':'⚖️ 방향 불확실';
+
+  // 장중이면 oparts의 "마감" 표현을 현재형으로 일괄 치환
+  if(isLiveCandle){
+    const lr=s=>s
+      .replace(/마감했습니다/g,'진행 중입니다')
+      .replace(/마감이지만/g,'흐름이지만 (장중)')
+      .replace(/마감이며/g,'흐름이며 (장중)')
+      .replace(/마감해\s/g,'흐름으로 ')
+      .replace(/종가로\s돌파했습니다/g,'돌파 중입니다 (장중)')
+      .replace(/다음 날\s/g,'종가 확인 후 ')
+      .replace(/다음 날\b/g,'종가 확인');
+    oparts.splice(0,oparts.length,...oparts.map(lr));
+  }
 
   return{typeKo,typeClass,isBull,change,bodyRatio,upperPct,lowerPct,volRatio,
     projVolRatio,isLiveCandle,liveTimeNote,
